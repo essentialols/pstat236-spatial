@@ -1,7 +1,7 @@
 ---
 title: "Areal Data Group Project"
 author: "Kayla, Ingmar, Hanmo, Will"
-date: "`11/2/2021`r Sys.Date()`"
+date: "`11/2/20212021-11-04"
 output: 
   html_document:
     keep_md: true
@@ -10,9 +10,7 @@ output:
     toc_depth: 3
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-```
+
 
 # Set up
 
@@ -24,7 +22,8 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 - rspatial.org  
 
 The packages we used are:  
-```{r}
+
+```r
 # install.packages(c("sp", "raster", "spdep"))
 library(sp)
 library(raster) # or terra
@@ -33,7 +32,8 @@ library(spdep)
 ```
 
 The dataset(s) we are using are published in `package name(s)`.
-```{r}
+
+```r
 ## load dataset(s)
 ```
 
