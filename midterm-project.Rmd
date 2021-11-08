@@ -1,7 +1,7 @@
 ---
 title: "Areal Data Group Project"
 author: "Kayla, Ingmar, Hanmo, Will"
-date: "`11/2/2021`r Sys.Date()`"
+date: `r Sys.Date()`
 output: 
   html_document:
     keep_md: true
@@ -24,10 +24,11 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 - rspatial.org  
 
 The packages we used are:  
-```{r}
+```{r echo=FALSE, message=TRUE, warning=FALSE}
 # install.packages(c("sp", "raster", "spdep"))
 library(sp)
 library(raster) # or terra
+library(terra)
 library(spdep)
 ## more...
 ```
@@ -35,6 +36,13 @@ library(spdep)
 The dataset(s) we are using are published in `package name(s)`.
 ```{r}
 ## load dataset(s)
+f <- system.file("ex/elev.tif", package="terra") #lux.shp has boarders
+elev <- rast(f)
+plot(elev) 
+
+## geostats has some datasets
+
+## https://www.globalforestwatch.org/ 
 ```
 
 # Exploratory Data Analysis  
