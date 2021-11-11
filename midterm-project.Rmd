@@ -1,7 +1,7 @@
 ---
 title: "Areal Data Group Project"
 author: "Kayla, Ingmar, Hanmo, Will"
-date: `r Sys.Date()`
+date: "`r Sys.Date()`"
 output: 
   html_document:
     keep_md: true
@@ -24,35 +24,131 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 - rspatial.org  
 
 The packages we used are:  
-```{r echo=FALSE, message=TRUE, warning=FALSE}
-# install.packages(c("sp", "raster", "spdep"))
+```{r}
+# install.packages(c("sp", "raster", "spdep", ....))
+library(tidyverse)
 library(sp)
-library(raster) # or terra
+# library(spData)
+# library(raster) # or terra
 library(terra)
 library(spdep)
 ## more...
 ```
 
-The dataset(s) we are using are published in `package name(s)`.
+The dataset we are using is published in `spData` and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
 ```{r}
 ## load dataset(s)
-f <- system.file("ex/elev.tif", package="terra") #lux.shp has boarders
-elev <- rast(f)
-plot(elev) 
-
-## geostats has some datasets
-
-## https://www.globalforestwatch.org/ 
+columbus <- vect(system.file("shapes/columbus.shp", package="spData")[1])
+df.columbus <- as.data.frame(columbus)
+glimpse(df.columbus)
 ```
+
+The county data is:  
+
+* HOVAL housing value (in \$1,000)  
+* INC household income (in \$1,000)  
+* CRIME residential burglaries and vehicle thefts per thousand households in the neighborhood  
+* OPEN open space in neighborhood  
+* PLUMB percentage housing units without plumbing  
+
+Look at some summaries of those metrics: _Kayla_   
+```{r, echo=FALSE, out.width= "50%"}
+## set up plotting color palette
+pal = colorRampPalette(c("lightgrey", "darkblue"))(10)
+
+cc <- cut(columbus$HOVAL, 10)
+mycols <- pal[as.numeric(cc)]
+hist(df.columbus$HOVAL, 
+     main = "Housing value", 
+     xlab = "Value  in $1000")
+plot(columbus, col = mycols, main = "Housing value in $1000")
+
+cc <- cut(columbus$INC, 10)
+mycols <- pal[as.numeric(cc)]
+hist(df.columbus$INC, 
+     main = "Household income", 
+     xlab = "Value  in $1000")
+plot(columbus, col = mycols, main = "Household income in $1000") 
+
+cc <- cut(columbus$CRIME, 10)
+mycols <- pal[as.numeric(cc)]
+hist(df.columbus$CRIME,
+     main = "Residential burglaries and vehicle thefts", 
+     xlab = "CRIME per thousand households in the neighborhood")
+plot(columbus, col = mycols, main = "Residential burglaries and vehicle thefts") 
+
+cc <- cut(columbus$OPEN, 10)
+mycols <- pal[as.numeric(cc)]
+hist(df.columbus$OPEN, 
+     main = "Open space in neighborhood", 
+     xlab = "open space")
+plot(columbus, col = mycols, main = "Open space in neighborhood") 
+
+cc <- cut(columbus$PLUMB, 10)
+mycols <- pal[as.numeric(cc)]
+hist(df.columbus$PLUMB, 
+     main = "Percentage of housing units without plumbing", 
+     xlab = "Percent no plumbing")
+plot(columbus, col = mycols, main = "Percentage of housing units without plumbing") 
+```
+
 
 # Exploratory Data Analysis  
 
 ## Measures of spatial association  
 
-### Neighbors  
+### Neighbors _Kayla_  
 adjecency matrix construction - nearest neighbors, categories, 1/dist  
+Figures out what the neighbors are:  
+```{r}
+xy <- centroids(columbus)
+head(neighbors <- adjacent(columbus, symmetrical=TRUE))
+plot(columbus, col='lightgray', border='black', lwd=1)
+p1 <- xy[neighbors[,1], ]
+p2 <- xy[neighbors[,2], ]
+lines(p1, p2, col='red', lwd=2)
+```
 
-### Moran's I  
+As an adjecency matrix  
+```{r}
+head(neighbors <- adjacent(columbus, pairs = FALSE))
+```
+
+### Moran's I - _Kayla_  
+Using `spdep` __...might add the formula for Moran's I here__  
+
+#### House value  
+```{r, out.width= "50%"}
+## Moran's I
+ww <-  adjacent(columbus, "touches", pairs=FALSE)
+(ac <- autocor(columbus$HOVAL, ww, "moran"))
+## Monte Carlo sim to test for significance (I'm following https://rspatial.org/terra/analysis/3-spauto.html#compute-morans-i)
+m <- sapply(1:99, function(i) {
+    autocor(sample(columbus$HOVAL), ww, "moran")
+})
+hist(m)
+
+## p-value
+sum(m >= ac) / 100
+```
+So there is some (Moran's I range (-1 to 1) = `r ac`) spatial autocorrelation in house value by county in Columbus Ohio.
+
+#### Household income  
+```{r, out.width= "50%"}
+## Moran's I
+(ac <- autocor(columbus$INC, ww, "moran"))
+## Monte Carlo sim to test for significance (I'm following https://rspatial.org/terra/analysis/3-spauto.html#compute-morans-i)
+m <- sapply(1:99, function(i) {
+    autocor(sample(columbus$INC), ww, "moran")
+})
+hist(m)
+
+## p-value
+sum(m >= ac) / 100
+```
+There is also positive (Moran's I = `r ac`) Spatial autocorrelation in household income.   
+
+#### Keep going?
 
 ### Geary's C  
 
