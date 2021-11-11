@@ -150,7 +150,9 @@ There is also positive (Moran's I = `r ac`) Spatial autocorrelation in household
 
 #### Keep going?
 
-### Geary's C  
+### Geary's C  __Ingmar__
+
+## 
 
 ## Spatial smoothers  
 Could delve further into this for the final project eg smoothing in image classification of fragmented habitats is problematic.  
