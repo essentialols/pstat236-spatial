@@ -180,18 +180,21 @@ Could delve further into this for the final project eg smoothing in image classi
 ### SAR error model _Ingmar_
 
 ```{r}
-#Create a k=5 nearest neighbor set
+# make spatial vector to simple feature
+columbus.sf <- sf::st_as_sf(columbus)
 
-# us.nb5<-knearneigh(geom(columbus), k=5, use_kd_tree = T)
-# us.nb5<-knn2nb(us.nb5)
-# us.wt5<-nb2listw(make.sym.nb(us.nb5), style="W")
-# 
-# spdep::errorsarlm(HOVAL~INC+CRIME+OPEN+PLUMB, columbus, listw = ww, etype="error", method="spam")
+# make simple feature to neighborhood
+columbus.nb <- poly2nb(columbus.sf)
 
-# fit.err<-errorsarlm(mortz~rurz+blacz+hisz+unemz+hvalz+densz+giniz, spdat, listw=us.wt5, etype="error", method="spam")
+# make neighborhood to list of weights
+lw <- nb2listw(columbus.nb, style="W")
 
-#  (formula = Z ~ PEXPOSURE + PCTAGE65P + PCTOWNHOME,
-# data = NY8, listw = NY8listwB)
+# estimate error SAR model
+col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+PLUMB, data=columbus.sf,
+ lw, method="eigen", quiet=T)
+
+# print model summary
+summary(col.errW.eig, correlation=TRUE)
 ```
 
 
