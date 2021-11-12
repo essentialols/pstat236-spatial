@@ -152,7 +152,17 @@ There is also positive (Moran's I = `r ac`) Spatial autocorrelation in household
 
 ### Geary's C  __Ingmar__
 
-## 
+$$
+C=\frac{(n-1) \sum_{i} \sum_{j} w_{i j}\left(Y_{i}-Y_{j}\right)^{2}}{2\left(\sum_{i \neq j} w_{i j}\right) \sum_{i}\left(Y_{i}-\bar{Y}\right)^{2}}
+$$
+
+Reinhard Furrer (http://user.math.uzh.ch/furrer/download/sta330/script_sta330.pdf, Version May 26, 2021) suggests to take 1-C to compare it to Moran's I more easily.
+
+```{r}
+(gearyc <- autocor(columbus$HOVAL, ww, "geary"))
+1-gearyc
+```
+
 
 ## Spatial smoothers  
 Could delve further into this for the final project eg smoothing in image classification of fragmented habitats is problematic.  
@@ -163,11 +173,27 @@ Could delve further into this for the final project eg smoothing in image classi
 
 # Spatial regression models  
 
-## Zero means  
+## Zero means __Ingmar__
 
-## Simultaneous Autoregressive Models  
+## Simultaneous Autoregressive Models  __Ingmar__
 
-### SAR error model  
+### SAR error model
+
+```{r}
+#Create a k=5 nearest neighbor set
+
+us.nb5<-knearneigh(coordinates(geom(columbus)), k=5)
+us.nb5<-knn2nb(us.nb5)
+us.wt5<-nb2listw(make.sym.nb(us.nb5), style="W")
+
+spdep::errorsarlm(HOVAL~INC+CRIME+OPEN+PLUMB, columbus, listw = ww, etype="error", method="spam")
+
+# fit.err<-errorsarlm(mortz~rurz+blacz+hisz+unemz+hvalz+densz+giniz, spdat, listw=us.wt5, etype="error", method="spam")
+
+#  (formula = Z ~ PEXPOSURE + PCTAGE65P + PCTOWNHOME,
+# data = NY8, listw = NY8listwB)
+```
+
 
 ### SAR lag model  
 
