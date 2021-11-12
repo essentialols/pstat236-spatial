@@ -166,7 +166,7 @@ sum(m >= ac) / 100
 ```
 
 ```
-## [1] 0.02
+## [1] 0.01
 ```
 So there is some (Moran's I range (-1 to 1) = 0.2213441) spatial autocorrelation in house value by county in Columbus Ohio.
 
@@ -238,11 +238,11 @@ Could delve further into this for the final project eg smoothing in image classi
 
 # Spatial regression models  
 
-## Zero means __Ingmar__
+## Zero means _Ingmar_
 
-## Simultaneous Autoregressive Models  __Ingmar__
+## Simultaneous Autoregressive Models  
 
-### SAR error model
+### SAR error model _Ingmar_
 
 
 ```r
@@ -261,15 +261,15 @@ Could delve further into this for the final project eg smoothing in image classi
 ```
 
 
-### SAR lag model  
+### SAR lag model _Will_
 
-### SAR Durbin model  
+### SAR Durbin model  _Will_
 
-### Likelihood Ratio  
+### Likelihood Ratio _Ingmar_
 
-### Model comparisons  
+### Model comparisons  _Ingmar_
 
-## Conditional Autoregressive Models  
+## Conditional Autoregressive Models  _Hanmo_
 
 ### Gaussian case  
 
