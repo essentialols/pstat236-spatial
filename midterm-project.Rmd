@@ -182,11 +182,11 @@ Could delve further into this for the final project eg smoothing in image classi
 ```{r}
 #Create a k=5 nearest neighbor set
 
-us.nb5<-knearneigh(coordinates(geom(columbus)), k=5)
-us.nb5<-knn2nb(us.nb5)
-us.wt5<-nb2listw(make.sym.nb(us.nb5), style="W")
-
-spdep::errorsarlm(HOVAL~INC+CRIME+OPEN+PLUMB, columbus, listw = ww, etype="error", method="spam")
+# us.nb5<-knearneigh(geom(columbus), k=5, use_kd_tree = T)
+# us.nb5<-knn2nb(us.nb5)
+# us.wt5<-nb2listw(make.sym.nb(us.nb5), style="W")
+# 
+# spdep::errorsarlm(HOVAL~INC+CRIME+OPEN+PLUMB, columbus, listw = ww, etype="error", method="spam")
 
 # fit.err<-errorsarlm(mortz~rurz+blacz+hisz+unemz+hvalz+densz+giniz, spdat, listw=us.wt5, etype="error", method="spam")
 
