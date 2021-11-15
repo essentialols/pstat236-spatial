@@ -215,9 +215,17 @@ summary(col.errW.eig, correlation=TRUE)
 ```
 
 
-### SAR lag model _Will_
+### SAR lag and Durbin models _Will_
+library(rgdal)
 
-### SAR Durbin model  _Will_
+hoval <- columbus$INC ~ columbus$HOVAL
+poly <- readOGR(system.file("shapes/columbus.shp", package="spData")[1])
+
+nb <- poly2nb(poly)
+lag <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb))
+durbin <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb),Durbin=TRUE)
+
+columbus$INC$residuals <- residuals(lag)
 
 ### Likelihood Ratio _Ingmar_
 
