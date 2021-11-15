@@ -1,7 +1,7 @@
 ---
 title: "Areal Data Group Project"
 author: "Kayla, Ingmar, Hanmo, Will"
-date: "2021-11-12"
+date: "2021-11-15"
 output: 
   html_document:
     keep_md: true
@@ -31,6 +31,7 @@ library(sp)
 # library(raster) # or terra
 library(terra)
 library(spdep)
+library(sf)
 ## more...
 ```
 
@@ -136,8 +137,12 @@ head(neighbors <- adjacent(columbus, pairs = FALSE))
 ```
 
 ### Moran's I - _Kayla_  
-Using `spdep` __...might add the formula for Moran's I here__  
+Using `spdep` 
 
+$$
+I=\frac{n}{\sum_{i=1}^{n} (y_{i}-\overline{y})^{2}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij} (y_{i}-\overline{y}) (y_{j}-\overline{y})}{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij}}
+$$
+*** I'm seeing the formula written in 2 ways above, and with denominator's flipped
 #### House value  
 
 ```r
@@ -166,7 +171,7 @@ sum(m >= ac) / 100
 ```
 
 ```
-## [1] 0.01
+## [1] 0
 ```
 So there is some (Moran's I range (-1 to 1) = 0.2213441) spatial autocorrelation in house value by county in Columbus Ohio.
 
@@ -201,7 +206,36 @@ sum(m >= ac) / 100
 ```
 There is also positive (Moran's I = 0.412344) Spatial autocorrelation in household income.   
 
-#### Keep going?
+#### Crime  
+
+```r
+## Moran's I
+(ac <- autocor(columbus$CRIME, ww, "moran"))
+```
+
+```
+## [1] 0.5154614
+```
+
+```r
+## Monte Carlo sim to test for significance (I'm following https://rspatial.org/terra/analysis/3-spauto.html#compute-morans-i)
+m <- sapply(1:99, function(i) {
+    autocor(sample(columbus$CRIME), ww, "moran")
+})
+hist(m)
+```
+
+<img src="midterm-project_files/figure-html/unnamed-chunk-8-1.png" width="50%" />
+
+```r
+## p-value
+sum(m >= ac) / 100
+```
+
+```
+## [1] 0
+```
+So again we see local spatial autocorrelation (Moran's I = 0.5154614).  
 
 ### Geary's C  __Ingmar__
 
@@ -236,34 +270,137 @@ Could delve further into this for the final project eg smoothing in image classi
 
 ### Markov random fields  
 
-# Spatial regression models  
+# Spatial regression models
 
 ## Zero means _Ingmar_
+
+$$
+\mathit{HOVAL} = \frac{1}{n}\sum_{i=1}^{n}\mathit{HOVAL}
+$$
+
+
+```r
+# make spatial vector to simple feature
+columbus.sf <- sf::st_as_sf(columbus)
+
+zero.means <- lm(HOVAL ~ 1, data=columbus.sf)
+summary(zero.means)
+```
+
+```
+## 
+## Call:
+## lm(formula = HOVAL ~ 1, data = columbus.sf)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -20.536 -12.736  -4.936   4.864  57.964 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   38.436      2.638   14.57   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 18.47 on 48 degrees of freedom
+```
+
 
 ## Simultaneous Autoregressive Models  
 
 ### SAR error model _Ingmar_
 
+Use global moran's i to test model residuals for spatial correlation
+lm.morantest()
+
 
 ```r
-#Create a k=5 nearest neighbor set
+# make simple feature to neighborhood
+columbus.nb <- poly2nb(columbus.sf)
 
-# us.nb5<-knearneigh(geom(columbus), k=5, use_kd_tree = T)
-# us.nb5<-knn2nb(us.nb5)
-# us.wt5<-nb2listw(make.sym.nb(us.nb5), style="W")
-# 
-# spdep::errorsarlm(HOVAL~INC+CRIME+OPEN+PLUMB, columbus, listw = ww, etype="error", method="spam")
+# make neighborhood to list of weights
+lw <- nb2listw(columbus.nb, style="W")
 
-# fit.err<-errorsarlm(mortz~rurz+blacz+hisz+unemz+hvalz+densz+giniz, spdat, listw=us.wt5, etype="error", method="spam")
+# estimate error SAR model without transformation
+col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
+ lw, method="eigen", quiet=T)
 
-#  (formula = Z ~ PEXPOSURE + PCTAGE65P + PCTOWNHOME,
-# data = NY8, listw = NY8listwB)
+# look at the residuals
+hist(residuals(col.errW.eig))
+```
+
+![](midterm-project_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+
+```r
+# estimate error SAR model with log transformation
+col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
+ lw, method="eigen", quiet=T)
+
+hist(residuals(col.errW.eig.log))
+```
+
+![](midterm-project_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+```r
+# print model summary
+summary(col.errW.eig.log, correlation=TRUE)
+```
+
+```
+## 
+## Call:
+## errorsarlm(formula = log(HOVAL) ~ INC + CRIME + OPEN + CP, data = columbus.sf, 
+##     listw = lw, method = "eigen", quiet = T)
+## 
+## Residuals:
+##       Min        1Q    Median        3Q       Max 
+## -0.503081 -0.190516 -0.051521  0.055445  0.855101 
+## 
+## Type: error 
+## Coefficients: (asymptotic standard errors) 
+##               Estimate Std. Error z value Pr(>|z|)
+## (Intercept)  3.7832959  0.2525868 14.9782  < 2e-16
+## INC          0.0134509  0.0104770  1.2839  0.19919
+## CRIME       -0.0099247  0.0042443 -2.3383  0.01937
+## OPEN         0.0194551  0.0086313  2.2540  0.02420
+## CP          -0.2520210  0.1435112 -1.7561  0.07907
+## 
+## Lambda: 0.45625, LR test value: 5.3082, p-value: 0.021226
+## Asymptotic standard error: 0.15476
+##     z-value: 2.9482, p-value: 0.0031967
+## Wald statistic: 8.6916, p-value: 0.0031967
+## 
+## Log likelihood: -9.062429 for error model
+## ML residual variance (sigma squared): 0.08037, (sigma: 0.2835)
+## Number of observations: 49 
+## Number of parameters estimated: 7 
+## AIC: 32.125, (AIC for lm: 35.433)
+## 
+##  Correlation of coefficients 
+##             sigma lambda (Intercept) INC   CRIME OPEN 
+## lambda      -0.20                                     
+## (Intercept)  0.00  0.00                               
+## INC          0.00  0.00  -0.85                        
+## CRIME        0.00  0.00  -0.67        0.38            
+## OPEN         0.00  0.00   0.04       -0.18  0.03      
+## CP           0.00  0.00  -0.09        0.20 -0.50 -0.17
 ```
 
 
-### SAR lag model _Will_
+### SAR lag and Durbin models _Will_
 
-### SAR Durbin model  _Will_
+
+library(rgdal)
+
+hoval <- columbus$INC ~ columbus$HOVAL
+poly <- readOGR(system.file("shapes/columbus.shp", package="spData")[1])
+
+nb <- poly2nb(poly)
+lag <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb))
+durbin <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb),Durbin=TRUE)
+
+columbus$INC$residuals <- residuals(lag)
 
 ### Likelihood Ratio _Ingmar_
 

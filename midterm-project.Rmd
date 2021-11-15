@@ -32,6 +32,7 @@ library(sp)
 # library(raster) # or terra
 library(terra)
 library(spdep)
+library(sf)
 ## more...
 ```
 
@@ -188,34 +189,61 @@ Could delve further into this for the final project eg smoothing in image classi
 
 ### Markov random fields  
 
-# Spatial regression models  
+# Spatial regression models
 
 ## Zero means _Ingmar_
 
-## Simultaneous Autoregressive Models  
-
-### SAR error model _Ingmar_
+$$
+\mathit{HOVAL} = \frac{1}{n}\sum_{i=1}^{n}\mathit{HOVAL}
+$$
 
 ```{r}
 # make spatial vector to simple feature
 columbus.sf <- sf::st_as_sf(columbus)
 
+zero.means <- lm(HOVAL ~ 1, data=columbus.sf)
+summary(zero.means)
+```
+
+
+## Simultaneous Autoregressive Models  
+
+### SAR error model _Ingmar_
+
+Use global moran's i to test model residuals for spatial correlation
+lm.morantest()
+
+```{r}
 # make simple feature to neighborhood
 columbus.nb <- poly2nb(columbus.sf)
 
 # make neighborhood to list of weights
 lw <- nb2listw(columbus.nb, style="W")
 
-# estimate error SAR model
-col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+PLUMB, data=columbus.sf,
+# estimate error SAR model without transformation
+col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
  lw, method="eigen", quiet=T)
 
+# look at the residuals
+hist(residuals(col.errW.eig))
+```
+
+```{r}
+
+# estimate error SAR model with log transformation
+col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
+ lw, method="eigen", quiet=T)
+
+hist(residuals(col.errW.eig.log))
+
 # print model summary
-summary(col.errW.eig, correlation=TRUE)
+summary(col.errW.eig.log, correlation=TRUE)
 ```
 
 
 ### SAR lag and Durbin models _Will_
+
+
 library(rgdal)
 
 hoval <- columbus$INC ~ columbus$HOVAL
