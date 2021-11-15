@@ -115,8 +115,12 @@ head(neighbors <- adjacent(columbus, pairs = FALSE))
 ```
 
 ### Moran's I - _Kayla_  
-Using `spdep` __...might add the formula for Moran's I here__  
+Using `spdep` 
 
+$$
+I=\frac{n}{\sum_{i=1}^{n} (y_{i}-\overline{y})^{2}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij} (y_{i}-\overline{y}) (y_{j}-\overline{y})}{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij}}
+$$
+*** I'm seeing the formula written in 2 ways above, and with denominator's flipped
 #### House value  
 ```{r, out.width= "50%"}
 ## Moran's I
@@ -148,7 +152,20 @@ sum(m >= ac) / 100
 ```
 There is also positive (Moran's I = `r ac`) Spatial autocorrelation in household income.   
 
-#### Keep going?
+#### Crime  
+```{r, out.width= "50%"}
+## Moran's I
+(ac <- autocor(columbus$CRIME, ww, "moran"))
+## Monte Carlo sim to test for significance (I'm following https://rspatial.org/terra/analysis/3-spauto.html#compute-morans-i)
+m <- sapply(1:99, function(i) {
+    autocor(sample(columbus$CRIME), ww, "moran")
+})
+hist(m)
+
+## p-value
+sum(m >= ac) / 100
+```
+So again we see local spatial autocorrelation (Moran's I = `r ac`).  
 
 ### Geary's C  __Ingmar__
 
