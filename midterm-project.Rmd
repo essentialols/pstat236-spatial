@@ -200,7 +200,6 @@ $$
 ```{r}
 # make spatial vector to simple feature
 columbus.sf <- sf::st_as_sf(columbus)
-
 zero.means <- lm(HOVAL ~ 1, data=columbus.sf)
 summary(zero.means)
 ```
@@ -214,6 +213,8 @@ Use global moran's i to test model residuals for spatial correlation
 lm.morantest()
 
 ```{r}
+
+
 # make simple feature to neighborhood
 columbus.nb <- poly2nb(columbus.sf)
 
@@ -243,7 +244,7 @@ summary(col.errW.eig.log, correlation=TRUE)
 
 ### SAR lag and Durbin models _Will_
 
-
+```{r}
 library(rgdal)
 
 hoval <- columbus$INC ~ columbus$HOVAL
@@ -254,6 +255,8 @@ lag <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb))
 durbin <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb),Durbin=TRUE)
 
 columbus$INC$residuals <- residuals(lag)
+```
+
 
 ### Likelihood Ratio _Ingmar_
 
