@@ -202,7 +202,7 @@ sum(m >= ac) / 100
 ```
 
 ```
-## [1] 0.01
+## [1] 0
 ```
 
 So there is not significant (Moran's I = 0.2213441, p > 0.05) spatial autocorrelation.
@@ -286,7 +286,7 @@ sum(m >= ac) / 100
 ```
 
 ```
-## [1] 0.45
+## [1] 0.53
 ```
 
 
@@ -355,7 +355,7 @@ sum(m >= gearyc) / 100
 ```
 
 ```
-## [1] 0.93
+## [1] 0.94
 ```
 
 No significant spatial autocorrelation (geary's c = 0.7889937, p > 0.05).  
@@ -467,7 +467,7 @@ sum(m >= gearyc) / 100
 ```
 
 ```
-## [1] 0.92
+## [1] 0.91
 ```
 
 No significant spatial autocorrelation (geary's c = 0.6806864, p > 0.05).  
@@ -728,30 +728,196 @@ moran.test(residuals(col.errW.eig.log), lw) # not significant
 
 ### SAR lag and Durbin models _Will_
 
+### SAR lag and Durbin models _Will_
+
+We compute the SAR lag and SAR Durbin models on the log-transformed housing value
+with the same covariates used for the SAR error model in the previous section.
+
+First we perform OLS regression and perform a (global?) Moran's I to test for
+spatial dependence among the residuals.
+
+(Procedure/code mirrors that in https://www.youtube.com/watch?v=b3HtV2Mhmvk)
+
+```r
+# define formula for log of HOVAL with covariates INC,CRIME,OPEN,CP
+hoval.log <- log(HOVAL) ~ INC+CRIME+OPEN+CP
+
+# ordinary least squares regression
+regOLS = lm(hoval.log,data=columbus.sf)
+summary(regOLS)
+```
+
+```
+## 
+## Call:
+## lm(formula = hoval.log, data = columbus.sf)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.46832 -0.21227 -0.09056  0.21365  0.95417 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  3.710041   0.281367  13.186   <2e-16 ***
+## INC          0.012241   0.011716   1.045   0.3018    
+## CRIME       -0.008734   0.004839  -1.805   0.0779 .  
+## OPEN         0.022476   0.010373   2.167   0.0357 *  
+## CP          -0.182049   0.144703  -1.258   0.2150    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.3243 on 44 degrees of freedom
+## Multiple R-squared:  0.4844,	Adjusted R-squared:  0.4375 
+## F-statistic: 10.33 on 4 and 44 DF,  p-value: 5.464e-06
+```
+
+```r
+lm.morantest(regOLS,lw)
+```
+
+```
+## 
+## 	Global Moran I for regression residuals
+## 
+## data:  
+## model: lm(formula = hoval.log, data = columbus.sf)
+## weights: lw
+## 
+## Moran I statistic standard deviate = 2.8525, p-value = 0.002169
+## alternative hypothesis: greater
+## sample estimates:
+## Observed Moran I      Expectation         Variance 
+##       0.21456538      -0.04123525       0.00804150
+```
+
+```r
+lm.LMtests(regOLS,lw,test="all")
+```
+
+```
+## 
+## 	Lagrange multiplier diagnostics for spatial dependence
+## 
+## data:  
+## model: lm(formula = hoval.log, data = columbus.sf)
+## weights: lw
+## 
+## LMerr = 4.8586, df = 1, p-value = 0.02751
+## 
+## 
+## 	Lagrange multiplier diagnostics for spatial dependence
+## 
+## data:  
+## model: lm(formula = hoval.log, data = columbus.sf)
+## weights: lw
+## 
+## LMlag = 1.6249, df = 1, p-value = 0.2024
+## 
+## 
+## 	Lagrange multiplier diagnostics for spatial dependence
+## 
+## data:  
+## model: lm(formula = hoval.log, data = columbus.sf)
+## weights: lw
+## 
+## RLMerr = 4.0769, df = 1, p-value = 0.04347
+## 
+## 
+## 	Lagrange multiplier diagnostics for spatial dependence
+## 
+## data:  
+## model: lm(formula = hoval.log, data = columbus.sf)
+## weights: lw
+## 
+## RLMlag = 0.84318, df = 1, p-value = 0.3585
+## 
+## 
+## 	Lagrange multiplier diagnostics for spatial dependence
+## 
+## data:  
+## model: lm(formula = hoval.log, data = columbus.sf)
+## weights: lw
+## 
+## SARMA = 5.7017, df = 2, p-value = 0.05779
+```
+
+The p-value of 0.002169 for the Moran's I statistic suggests spatial
+dependence among residuals. Next we perform the SAR tests. The SAR lag model assumes the form
+$y = \rho W y + X\beta + \varepsilon$, and is a global model since $y$ implicitly depends on
+each location.
+
 
 ```r
 library(rgdal)
 
-hoval <- columbus$INC ~ columbus$HOVAL
-poly <- readOGR(system.file("shapes/columbus.shp", package="spData")[1])
+
+
+# estimate SAR lag model with log transformation
+lag.log <- lagsarlm(formula=hoval.log,data=columbus.sf,listw=lw,Durbin=FALSE)
+
+
+hist(residuals(lag.log))
 ```
 
-```
-## OGR data source with driver: ESRI Shapefile 
-## Source: "/Library/Frameworks/R.framework/Versions/4.0/Resources/library/spData/shapes/columbus.shp", layer: "columbus"
-## with 49 features
-## It has 20 fields
-## Integer64 fields read as strings:  COLUMBUS_ COLUMBUS_I POLYID
-```
+![](midterm-project_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
 
 ```r
-nb <- poly2nb(poly)
-lag <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb))
-durbin <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb),Durbin=TRUE)
-
-columbus$INC$residuals <- residuals(lag)
+summary(lag.log, correlation=TRUE)
 ```
 
+```
+## 
+## Call:lagsarlm(formula = hoval.log, data = columbus.sf, listw = lw, 
+##     Durbin = FALSE)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.48184 -0.20602 -0.10922  0.11278  0.89848 
+## 
+## Type: lag 
+## Coefficients: (asymptotic standard errors) 
+##               Estimate Std. Error z value  Pr(>|z|)
+## (Intercept)  2.9330477  0.6201326  4.7297 2.248e-06
+## INC          0.0109985  0.0109584  1.0037   0.31555
+## CRIME       -0.0085071  0.0045184 -1.8828   0.05973
+## OPEN         0.0218856  0.0096116  2.2770   0.02279
+## CP          -0.1482052  0.1379725 -1.0742   0.28275
+## 
+## Rho: 0.21738, LR test value: 1.6599, p-value: 0.19762
+## Asymptotic standard error: 0.15432
+##     z-value: 1.4086, p-value: 0.15895
+## Wald statistic: 1.9842, p-value: 0.15895
+## 
+## Log likelihood: -10.88657 for lag model
+## ML residual variance (sigma squared): 0.090319, (sigma: 0.30053)
+## Number of observations: 49 
+## Number of parameters estimated: 7 
+## AIC: 35.773, (AIC for lm: 35.433)
+## LM test for residual autocorrelation
+## test value: 4.6528, p-value: 0.031003
+## 
+##  Correlation of coefficients 
+##             sigma rho   (Intercept) INC   CRIME OPEN 
+## rho         -0.08                                    
+## (Intercept)  0.07 -0.91                              
+## INC          0.01 -0.14 -0.25                        
+## CRIME       -0.01  0.12 -0.42        0.43            
+## OPEN         0.00  0.00  0.00       -0.18  0.07      
+## CP          -0.02  0.24 -0.20        0.13 -0.54 -0.19
+```
+
+The spatial Durbin model (SDM) takes the form $y = \rho Wy + \alpha\iota +X\beta + WX\theta + \varepsilon$,
+which differs from the lag model primarily by dependence on Wx (Lesage, "an Introduction to Spatial Econometrics).
+
+
+```r
+# estimate SAR Durbin model with log transformation
+durbin.log <- lagsarlm(formula=hoval.log,data=columbus.sf,listw=lw,Durbin=TRUE)
+
+hist(residuals(durbin.log))
+```
+
+![](midterm-project_files/figure-html/unnamed-chunk-39-1.png)<!-- -->
 
 ### Likelihood Ratio _Ingmar_
 
@@ -790,7 +956,7 @@ $$
 $$
 
 
-![](midterm-project_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-40-1.png)<!-- -->
 
 
 
@@ -815,7 +981,7 @@ Table: 95% confidence intervals for model coefficients
 |DISCBD      | -0.0001788| -0.1345074|  0.1352248|
 |CP1         | -0.1957275| -0.5607323|  0.1763779|
 
-![](midterm-project_files/figure-html/unnamed-chunk-41-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-43-1.png)<!-- -->
 
 The log likelihood of this model is 17.97  while the training root mean square error (RMSE) is 59.46. From the table of $95\%$ confidence intervals for coefficients, we have
 
@@ -826,7 +992,7 @@ The log likelihood of this model is 17.97  while the training root mean square e
 * Hold other predictors fixed, regions with **closer distance to CBD** tend to have higher *House values*.
 * Hold other predictors fixed, **core** regions tend to have higher *House values*.
 
-![](midterm-project_files/figure-html/unnamed-chunk-42-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-44-1.png)<!-- -->
 
 
 ```r
