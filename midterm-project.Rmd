@@ -463,19 +463,54 @@ moran.test(residuals(col.errW.eig.log), lw) # not significant
 
 ### SAR lag and Durbin models _Will_
 
+### SAR lag and Durbin models _Will_
+
+We compute the SAR lag and SAR Durbin models on the log-transformed housing value
+with the same covariates used for the SAR error model in the previous section.
+
+First we perform OLS regression and perform a (global?) Moran's I to test for
+spatial dependence among the residuals.
+
+(Procedure/code mirrors that in https://www.youtube.com/watch?v=b3HtV2Mhmvk)
+```{r}
+# define formula for log of HOVAL with covariates INC,CRIME,OPEN,CP
+hoval.log <- log(HOVAL) ~ INC+CRIME+OPEN+CP
+
+# ordinary least squares regression
+regOLS = lm(hoval.log,data=columbus.sf)
+summary(regOLS)
+lm.morantest(regOLS,lw)
+lm.LMtests(regOLS,lw,test="all")
+```
+
+The p-value of 0.002169 for the Moran's I statistic suggests spatial
+dependence among residuals. Next we perform the SAR tests. The SAR lag model assumes the form
+$y = \rho W y + X\beta + \varepsilon$, and is a global model since $y$ implicitly depends on
+each location.
+
 ```{r}
 library(rgdal)
 
-hoval <- columbus$INC ~ columbus$HOVAL
-poly <- readOGR(system.file("shapes/columbus.shp", package="spData")[1])
 
-nb <- poly2nb(poly)
-lag <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb))
-durbin <- lagsarlm(formula=hoval,data=df.columbus,listw=nb2listw(nb),Durbin=TRUE)
 
-columbus$INC$residuals <- residuals(lag)
+# estimate SAR lag model with log transformation
+lag.log <- lagsarlm(formula=hoval.log,data=columbus.sf,listw=lw,Durbin=FALSE)
+
+
+hist(residuals(lag.log))
+
+summary(lag.log, correlation=TRUE)
 ```
 
+The spatial Durbin model (SDM) takes the form $y = \rho Wy + \alpha\iota +X\beta + WX\theta + \varepsilon$,
+which differs from the lag model primarily by dependence on Wx (Lesage, "an Introduction to Spatial Econometrics).
+
+```{r}
+# estimate SAR Durbin model with log transformation
+durbin.log <- lagsarlm(formula=hoval.log,data=columbus.sf,listw=lw,Durbin=TRUE)
+
+hist(residuals(durbin.log))
+```
 
 ### Likelihood Ratio _Ingmar_
 
