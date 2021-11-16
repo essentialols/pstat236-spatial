@@ -33,6 +33,8 @@ library(sp)
 library(terra)
 library(spdep)
 library(sf)
+library(GGally)
+library(ape)
 ## more...
 ```
 
@@ -354,20 +356,17 @@ knitr::kable(m, format = 'latex', digits = 3)
 
 There are differences observed in local and global spatial autocorrelation in the data. For both Moran's I and Geary's C there was not significant spatial autocorrelation in house value or Open space. There was significant postive global spatial autocorrelation in household income, crime, and plumbing using Moran's I, but no significant local spatial autocorrelation.  
 
-## Spatial smoothers  
-Could delve further into this for the final project eg smoothing in image classification of fragmented habitats is problematic.  
-
-### Clustering  
-
-### Markov random fields  
-
 # Spatial regression models
 
 ## Zero means _Ingmar_
 
+We decide to model the \textit{HOVAL} (home value) variable for all of our models. The simplest, yet naive, model is the zero means model, which is essentially an intercept-only model, i.e. the average of the \textit{HOVAL} variable. We decide to start at this point to address each of the models' shortcomings with each improved model.
+
 $$
 \mathit{HOVAL} = \frac{1}{n}\sum_{i=1}^{n}\mathit{HOVAL}
 $$
+
+We estimate the model using \texttt{lm} function:
 
 ```{r}
 # make spatial vector to simple feature
@@ -376,6 +375,39 @@ zero.means <- lm(HOVAL ~ 1, data=columbus.sf)
 summary(zero.means)
 ```
 
+We find the average home value is \$38436. Since we will use the log-transformed home value for subsequent models, we repeat the zero means model for the transformed variable for purposes of comparison.
+
+```{r}
+# estimate log-transformed model
+zero.means.log <- lm(log(HOVAL) ~ 1, data=columbus.sf)
+summary(zero.means.log)
+```
+
+We find that the model estimates \textit{log(HOVAL)} to be 3.55231, which is \$34894 when transformed back.
+
+## Linear Model with Independent Residuals _Ingmar_
+
+Improving over the zero means model, we model the home value \textit{HOVAL} as a linear function of its covariates with independent errors.
+
+$$
+\mathbf{HOVAL} = \mathbf{X}\beta + \varepsilon
+$$
+
+where X is a matrix of the predictors \textit{INC} (income), \textit{CRIME}, \textit{OPEN} (open space in neighborhood), and \textit{CP} (whether the neighborhood is in the center or periphery). 
+
+We estimate the model with
+
+```{r}
+col.lm <- lm(HOVAL~INC+CRIME+OPEN, data=columbus.sf)
+summary(col.lm)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(col.lm)
+```
+
+The diagnostic plots show that the assumptions of regression are not satisfied, which is to be expected since we know that most areal data is spatially dependent.
 
 ## Simultaneous Autoregressive Models  
 
@@ -383,6 +415,18 @@ summary(zero.means)
 
 Use global moran's i to test model residuals for spatial correlation
 lm.morantest()
+
+To address the shortcomings of the linear model under the assumption of independent errors, we introduce Simultaneous Autoregressive Models. The models solve simultaneously for the regression coefficients and for the autoregressive error structure.
+
+, we The solution is to use models that simultaneously solve for:
+1 the regression coefficients, i.e., the effects of the predictors on the
+response;
+2 the autoregressive error structure, i.e., the strength and nature of
+the spatial autocorrelation
+Several forms of this, depending the cause of spatial autocorrelation:
+as a result of accounting for the predictors; a spatially-correlated
+residual effect: ‘induced spatial dependence’ (“spatial error
+model”)
 
 ```{r}
 # make simple feature to neighborhood
