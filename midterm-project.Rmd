@@ -213,8 +213,6 @@ Use global moran's i to test model residuals for spatial correlation
 lm.morantest()
 
 ```{r}
-
-
 # make simple feature to neighborhood
 columbus.nb <- poly2nb(columbus.sf)
 
@@ -230,7 +228,6 @@ hist(residuals(col.errW.eig))
 ```
 
 ```{r}
-
 # estimate error SAR model with log transformation
 col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
  lw, method="eigen", quiet=T)
@@ -239,6 +236,12 @@ hist(residuals(col.errW.eig.log))
 
 # print model summary
 summary(col.errW.eig.log, correlation=TRUE)
+```
+
+
+```{r}
+# Run Moran's I test for col.errW.eig.log
+moran.test(residuals(col.errW.eig.log), lw) # not significant
 ```
 
 
