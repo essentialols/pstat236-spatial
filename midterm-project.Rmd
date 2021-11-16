@@ -261,9 +261,89 @@ columbus$INC$residuals <- residuals(lag)
 
 ## Conditional Autoregressive Models  _Hanmo_
 
-### Gaussian case  
+In the next step, we implement the conditional autoregressive (CAR) model on the Columbus data to study the impact of covariates on House values in Columbus, OH, 1980 with spatial information. 
 
-### non-Gaussian case  
+The CAR model essentially assumes the spatial estimation is conditional on the value of neighbors. As a typical Bayes model, CAR model assumes prior distribution on the model parameters and applies computationally intensive sampling techniques like Markov Chain Monte Carlo (MCMC) or MCMC with Gibbs sampling to find the fitted parameters.
 
-### Model comparisons  
+
+
+Since we have one response variable *House value*, the CAR model has only one random effect $\phi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
+
+
+The package *CARBayes* by Duncan Lee is used to apply the CAR model in R. The specific function we use is *S.CARleroux*, where it specifies a CAR model proposed by Brian G. Leroux in 2000. The model expression is as follows. 
+
+* $\mathbf{W}$ is a 0-1 neighborhood or weight matrix
+* $k = 1, \dots, K$ is the index for a certain areal unit
+* $\rho$ is a spatial correlation parameter, with $\rho=0$ means indenpendence and $\rho=1$ indicates strong spatial correlation
+
+
+$$
+\psi_{k}=\phi_{k}
+$$
+$$
+\phi_{k} \mid \phi_{-k}, \mathbf{W}, \tau^{2}, \rho \sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \phi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right)
+$$
+
+$$
+\begin{aligned}
+\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(a, b) \\
+\rho & \sim \text { Uniform }(0,1)
+\end{aligned}
+$$
+
+
+```{r echo=F,cache=T}
+df.columbus_CAR = df.columbus
+df.columbus_CAR$CP = as.factor(df.columbus_CAR$CP)
+ggpairs(data = df.columbus_CAR, columns = c(7, 8:12, 18))
+```
+
+
+```{r cache=T}
+set.seed(2021)
+car_model_gaussian = CARBayes::S.CARleroux(log(HOVAL)~INC+CRIME+OPEN+DISCBD+CP, data = df.columbus_CAR, family = "gaussian", W = ww, burnin = 100000, n.sample = 300000, thin = 10, verbose = F)
+```
+
+```{r echo=F}
+# print(paste0("The log likehood is ", round(logLik(car_model_gaussian), 2)))
+# INC+CRIME+DISCBD+X+Y+PERIMETER+CP 13.59
+```
+
+
+
+```{r echo=F}
+betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
+resultsCAR1 <- betas1$quantiles
+rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
+knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
+
+# print(paste0("The MSE is ", round(sqrt(sum((exp(car_model_gaussian$fitted.values) - df.columbus_CAR$HOVAL)^2)), 2)))
+
+plot(x = df.columbus_CAR$HOVAL, y = exp(car_model_gaussian$fitted.values), type="p",
+     xlab = "housing value", ylab = "Fitted value", main = "Fitted value vs Observed value")
+abline(0,1)
+```
+
+The log likelihood of this model is 17.97  while the training root mean square error (RMSE) is 59.46. From the table of $95\%$ confidence intervals for coefficients, we have
+
+* *CRIME* and *PLUMB* are the two variables that is significant since their confidence intervals don't have zero involved.
+* Hold other predictors fixed, regions with **less crimes** tend to have higher *House values*.
+* Hold other predictors fixed, regions with **higher household incomes** tend to have higher *House values*.
+* Hold other predictors fixed, regions with **more open area** tend to have higher *House values*.
+* Hold other predictors fixed, regions with **closer distance to CBD** tend to have higher *House values*.
+* Hold other predictors fixed, **core** regions tend to have higher *House values*.
+
+```{r echo=F}
+cc <- cut(residuals(car_model_gaussian), 10)
+mycols <- pal[as.numeric(cc)]
+plot(columbus, col = mycols, main = "Residuals")
+```
+
+```{r}
+# Moran I
+Moran.I(residuals(car_model_gaussian), ww)$p.value
+```
+
+We also tested the Moran's I autocorrelation coefficient for the residuals. It shows there is **no** significant spatial correlation of the residuals since the p-value $p = 0.1 > 0.05$. Therefore, our CAR model fits the areal data nicely and leaves no significant spatial information in the residuals.
+ 
 
