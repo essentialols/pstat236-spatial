@@ -440,7 +440,9 @@ lm.LMtests(regOLS,lw,test="all")
 ```
 
 The p-value of 0.002169 for the Moran's I statistic suggests spatial
-dependence among residuals. Next we perform the SAR tests:
+dependence among residuals. Next we perform the SAR tests. The SAR lag model assumes the form
+$y = \rho W y + X\beta + \varepsilon$, and is a global model since $y$ implicitly depends on
+each location.
 
 ```{r}
 library(rgdal)
@@ -455,6 +457,9 @@ hist(residuals(lag.log))
 
 summary(lag.log, correlation=TRUE)
 ```
+
+The spatial Durbin model (SDM) takes the form $y = \rho Wy + \alpha\iota +X\beta + WX\theta + \varepsilon$,
+which differs from the lag model primarily by dependence on Wx (Lesage, "an Introduction to Spatial Econometrics).
 
 ```{r}
 # estimate SAR Durbin model with log transformation
