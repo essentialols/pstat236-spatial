@@ -93,6 +93,13 @@ hist(df.columbus$PLUMB,
      main = "Percentage of housing units without plumbing", 
      xlab = "Percent no plumbing")
 plot(columbus, col = mycols, main = "Percentage of housing units without plumbing") 
+
+cc <- cut(columbus$CP, 10)
+mycols <- pal[as.numeric(cc)]
+hist(df.columbus$CP, 
+     main = "Center vs edge (roughly urban vs rural)", 
+     xlab = "Percent urban vs rural")
+plot(columbus, col = mycols, main = "Center vs edge (roughly urban vs rural)") 
 ```
 
 Because we plan to use housing value as our response variable try a transformation.  
@@ -107,7 +114,7 @@ hist(log10(df.columbus$HOVAL),
 ## Measures of spatial association  
 
 ### Neighbors _Kayla_  
-adjecency matrix construction - nearest neighbors, categories, 1/dist  
+adjacency matrix construction - nearest neighbors, categories, 1/dist  
 Figures out what the neighbors are:  
 ```{r}
 xy <- centroids(columbus)
@@ -125,13 +132,15 @@ head(neighbors <- adjacent(columbus, pairs = FALSE))
 
 ### Moran's I - _Kayla_  
 
+Using `spdep` to test for spatial autocorrelation of the variable, by county in Columbus, OH. 
+
 $$
 I=\frac{n}{\sum_{i=1}^{n} (y_{i}-\overline{y})^{2}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij} (y_{i}-\overline{y}) (y_{j}-\overline{y})}{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij}}
 $$
 
-Using `spdep` to test for spatial autocorrelation of the variable, by county in Columbus, OH. Moran's I is a global measure of spatial autocorrelation with values ranging -1 to 1. Here we are using a neighbor's matrix for any counties that are touching each other.   
+Moran's $I$ is a global measure of spatial autocorrelation with values ranging -1 to 1. Here we are using a neighbor's matrix for any counties that are touching each other ($w_{ij}$). $n$ is the number of neighborhoods in Columbus, OH which are indexed by $i$ and $j$. $\overline{y}$ is the mean of $y_{1...n}$.    
 
-The adjacency matrix:  
+The adjacency matrix for all counties that touch each other:  
 ```{r}
 ww <-  adjacent(columbus, "touches", pairs=FALSE)
 ```
@@ -242,13 +251,15 @@ mi.p[5] <- "*"
 
 There is significant spatial autocorrelation with plumbing (Moran's I = `r ac`, p < 0.05).
 
-### Geary's C  __Ingmar__
+### Geary's C  __Ingmar & Kayla__  
 
+N is the number of spatial units indexed by {\displaystyle i}i and {\displaystyle j}j; {\displaystyle x}x is the variable of interest; {\displaystyle {\bar {x}}}{\bar {x}} is the mean of {\displaystyle x}x; {\displaystyle w_{ij}}w_{ij} is a matrix of spatial weights with zeroes on the diagonal (i.e., {\displaystyle w_{ii}=0}{\displaystyle w_{ii}=0}); and {\displaystyle W}W is the sum of all {\displaystyle w_{ij}}w_{ij}.
 $$
-C=\frac{(n-1) \sum_{i} \sum_{j} w_{i j}\left(Y_{i}-Y_{j}\right)^{2}}{2\left(\sum_{i \neq j} w_{i j}\right) \sum_{i}\left(Y_{i}-\bar{Y}\right)^{2}}
+C=\frac{(n-1) \sum_{i} \sum_{j} w_{i j}\left(y_{i}-y_{j}\right)^{2}}{2\left(\sum_{i \neq j} w_{i j}\right) \sum_{i}\left(y_{i}-\bar{y}\right)^{2}}
 $$
 
-Geary's C is a measure of local spatial autocorrelation that is roughly inversely related to Moran's I.  
+Geary's $C$ is a measure of local spatial autocorrelation that is roughly inversely related to Moran's I.  
+The values ranging 0 to > 1, with values 0-1 representing positive spatial autocorrelation and values > 1 representing negative spatial autocorrelation. The neighbor's matrix ($w_{ij}$) is the same what was used for Moran's I. $\sum_{i \neq j} w_{i j}$ is the sum of that weight matrix with the diagonal equal to 0.  
 
 #### House Value
 ```{r, out.width= "50%"}
@@ -354,7 +365,7 @@ m <- data.frame(Morans_I = mi,
 knitr::kable(m, format = 'latex', digits = 3)
 ```
 
-There are differences observed in local and global spatial autocorrelation in the data. For both Moran's I and Geary's C there was not significant spatial autocorrelation in house value or Open space. There was significant postive global spatial autocorrelation in household income, crime, and plumbing using Moran's I, but no significant local spatial autocorrelation.  
+There are differences observed in local and global spatial autocorrelation in the data. For both Moran's I and Geary's C there was not significant spatial autocorrelation in house value or Open space. There was significant positive global spatial autocorrelation in household income, crime, and plumbing using Moran's I, but no significant local spatial autocorrelation.  
 
 # Spatial regression models
 
