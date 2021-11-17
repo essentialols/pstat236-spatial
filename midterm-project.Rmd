@@ -477,13 +477,16 @@ hist(residuals(col.errW.eig.log))
 summary(col.errW.eig.log, correlation=TRUE)
 ```
 
-We find that 
+We find that only $CRIME$ and $OPEN$ are significant at the $\alpha=0.05$ level. For every additional major theft (residential burglaries and vehicle theft) per 1000 households, the predicted home value decreases by approximately \$1010 ($e^{0.0099247}=1.009974$), holding other variables constant. For every additional unit (which is not provided in the description) of open space, the home value is expected to increase by \$1020 ($e^{0.0194551}=1.019646$), holding other variables constant.
+
+We also check whether there is some spatial dependence within the residuals of the model by performing Moran's I test. The test tests $H_0$: There is no spatial dependence against $H_1$: There is spatial dependence. We reject $H_0$ if the test statistic $ <\alpha=0.05$.
 
 ```{r}
 # Run Moran's I test for col.errW.eig.log
 moran.test(residuals(col.errW.eig.log), lw) # not significant
 ```
 
+With a p-value of 0.3559, we fail to reject $H_0$. There does not seem to be any spatial dependence present in the residuals of our error model.
 
 ### SAR lag and Durbin models _Will_
 
