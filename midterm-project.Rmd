@@ -141,7 +141,7 @@ Roughly the expected value for Moran's I is $E(I)=\frac{-1}{n-1}$
 -1/(nrow(columbus)-1)
 ```
 
-Values significantly ($\alpha = 0.05$) below that indicate negative spatial autocorrelation (a phenomena that generally occurs in random datasets) and above that indicates positive spatial autocorrelation (neighbors are more similar to each other than non-neighbors).  
+Values significantly ($\alpha = 0.05$) below that indicate negative spatial autocorrelation (a phenomena that generally occurs in random datasets) and above that indicates positive spatial autocorrelation (neighbors are more similar to each other than non-neighbors). 
 
 *** I'm seeing the formula written in 2 ways above, and with denominator's flipped  
 
@@ -358,12 +358,17 @@ There are differences observed in local and global spatial autocorrelation in th
 
 # Spatial regression models
 
-## Zero means _Ingmar_
+## Constant means _Ingmar_
 
-We decide to model the \textit{HOVAL} (home value) variable for all of our models. The simplest, yet naive, model is the zero means model, which is essentially an intercept-only model, i.e. the average of the \textit{HOVAL} variable. We decide to start at this point to address each of the models' shortcomings with each improved model.
+We decide to model the \textit{HOVAL} (home value) variable for all of our models. The simplest, yet naive, model is the zero means model, which is essentially an intercept-only model, i.e. the average of the \textit{HOVAL} variable.
 
 $$
-\mathit{HOVAL} = \frac{1}{n}\sum_{i=1}^{n}\mathit{HOVAL}
+Y_i=\mu+\varepsilon_i
+$$
+Where $Y_i$ is the value of a home in 1000s of dollars, $\mu$ is the mean home value and $\epsilon_i$ are the individual deviations from the mean, which we assume to be be i.i.d. distributed.
+
+$$
+\hat{Y_i} = \bar{Y} = \frac{1}{n}\sum_{i=1}^{n}Y_i
 $$
 
 We estimate the model using \texttt{lm} function:
@@ -383,14 +388,14 @@ zero.means.log <- lm(log(HOVAL) ~ 1, data=columbus.sf)
 summary(zero.means.log)
 ```
 
-We find that the model estimates \textit{log(HOVAL)} to be 3.55231, which is \$34894 when transformed back.
+We find that the model estimates \textit{log(HOVAL)} to be 3.55231, which is \$34894 after exponentiating.
 
 ## Linear Model with Independent Residuals _Ingmar_
 
-Improving over the zero means model, we model the home value \textit{HOVAL} as a linear function of its covariates with independent errors.
+Improving over the zero means model, we model the home value \textit{HOVAL} as a linear function of its (non-spatial) covariates with i.i.d. errors.
 
 $$
-\mathbf{HOVAL} = \mathbf{X}\beta + \varepsilon
+\mathbf{Y} = \mathbf{X}\beta + \varepsilon
 $$
 
 where X is a matrix of the predictors \textit{INC} (income), \textit{CRIME}, \textit{OPEN} (open space in neighborhood), and \textit{CP} (whether the neighborhood is in the center or periphery). 
@@ -407,7 +412,7 @@ par(mfrow=c(2,2))
 plot(col.lm)
 ```
 
-The diagnostic plots show that the assumptions of regression are not satisfied, which is to be expected since we know that most areal data is spatially dependent.
+The diagnostic plots suggests that the assumptions of regression are not satisfied, which is to be expected since we know that most areal data is spatially dependent.
 
 ## Simultaneous Autoregressive Models  
 
@@ -416,17 +421,33 @@ The diagnostic plots show that the assumptions of regression are not satisfied, 
 Use global moran's i to test model residuals for spatial correlation
 lm.morantest()
 
-To address the shortcomings of the linear model under the assumption of independent errors, we introduce Simultaneous Autoregressive Models. The models solve simultaneously for the regression coefficients and for the autoregressive error structure.
+To address the shortcomings of the linear model under the assumption of i.i.d. errors, we introduce Simultaneous Autoregressive Models. The models solve simultaneously for the regression coefficients and for the autoregressive error structure. In the Spatial Error Model, spatial autocorrelation enters in the specification only through the error terms.
 
-, we The solution is to use models that simultaneously solve for:
-1 the regression coefficients, i.e., the effects of the predictors on the
-response;
-2 the autoregressive error structure, i.e., the strength and nature of
-the spatial autocorrelation
-Several forms of this, depending the cause of spatial autocorrelation:
-as a result of accounting for the predictors; a spatially-correlated
-residual effect: ‘induced spatial dependence’ (“spatial error
-model”)
+To derive the model, we formulate the error as a first-order spatial autoregressive process
+
+\begin{equation}
+\varepsilon=\lambda W \varepsilon+u
+\end{equation}
+
+where $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i}$ a random error term, assumed to be i.i.d. If $|\lambda|<1$ and solving for $\varepsilon$ yields
+
+\begin{equation}
+\varepsilon=(I-\lambda W)^{-1} u
+\end{equation}
+
+We obtain the spatial error model by inserting $\varepsilon$ into the standard regression model
+
+\begin{equation}
+y=X \beta+(I-\lambda W)^{-1} u
+\end{equation}
+
+where X is a matrix of the covariates $INC$, $CRIME$, $OPEN$, and $CP$. with $E\left[u u^{\prime}\right]=\sigma^{2} I$, which results in the following error variance-covariance matrix
+
+\begin{equation}
+E\left[\varepsilon \varepsilon^{\prime}\right]=\sigma^{2}(I-\lambda W)^{-1}\left(I-\lambda W^{\prime}\right)^{-1}
+\begin{equation}
+
+In order to estimate this model, we first create a list of spatial weights for neighbors. Then we estimate the model using the errorsarlm function from the spatialreg package.
 
 ```{r}
 # make simple feature to neighborhood
@@ -443,6 +464,8 @@ col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
 hist(residuals(col.errW.eig))
 ```
 
+The residuals are not normally distributed. We therefore, log-transform the response to normalize them.
+
 ```{r}
 # estimate error SAR model with log transformation
 col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
@@ -454,6 +477,7 @@ hist(residuals(col.errW.eig.log))
 summary(col.errW.eig.log, correlation=TRUE)
 ```
 
+We find that 
 
 ```{r}
 # Run Moran's I test for col.errW.eig.log
