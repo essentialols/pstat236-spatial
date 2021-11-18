@@ -550,9 +550,9 @@ durbin.log <- lagsarlm(formula=hoval.log,data=columbus.sf,listw=lw,Durbin=TRUE)
 hist(residuals(durbin.log))
 ```
 
-### Likelihood Ratio _Ingmar_
+### Likelihood Ratio _Will_
 
-### Model comparisons  _Ingmar_
+### Model comparisons  _Will_
 
 ## Conditional Autoregressive Models  _Hanmo_
 
@@ -642,7 +642,7 @@ Moran.I(residuals(car_model_gaussian), ww)$p.value
 We also tested the Moran's I autocorrelation coefficient for the residuals. It shows there is **no** significant spatial correlation of the residuals since the p-value $p = 0.1 > 0.05$. Therefore, our CAR model fits the areal data nicely and leaves no significant spatial information in the residuals.
  
 
-# Conclussions  
+# Conclusions  
 
 # References  
 
