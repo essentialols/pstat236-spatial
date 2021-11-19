@@ -508,7 +508,10 @@ The SAR lag model assumes the form
 $$
 y = \rho W y + X\beta + \varepsilon,
 $$
-where $W$ is the neighbor matrix and $\rho$ is a real parameter that further controls the interaction strength between teh data. Like the SAR error model, the SAR lag model is a global spatial model since it is first-order autoregressive. In this model, the autoregressive structure comes from the data $y$ rather than from the residuals.
+where $W$ is the neighbor matrix and $\rho$ is a real parameter that further controls the
+interaction strength between teh data. Like the SAR error model, the SAR lag model is a global
+spatial model since it is first-order autoregressive. In this model, the autoregressive structure
+comes from the data $y$ rather than from the residuals.
 
 ```{r}
 # make simple feature to neighborhood
@@ -540,9 +543,12 @@ hist(residuals(lag.log))
 summary(lag.log, correlation=TRUE)
 ```
 
-As with the error model, the CRIME and OPEN covariates have the lowest p-values. However for this model, only OPEN
-falls below the threshold p-value of 0.05, whereas CRIME gave the lowest p-value in the SAR error model.
-The p-values are higher than those in the error model for all covariates except OPEN., indicating less spatial correlation overall.
+As with the error model, the CRIME and OPEN covariates have the lowest p-values.
+However for this model, only OPEN
+falls below the threshold p-value of 0.05, whereas CRIME gave the lowest p-value in
+the SAR error model.
+The p-values are higher than those in the error model for all covariates except OPEN.,
+indicating less spatial correlation overall.
 
 Finally, we test for spatial dependence among the residuals.
 
@@ -559,7 +565,8 @@ The spatial Durbin model (SDM) takes the form
 $$
 y = \rho Wy + WX\theta + X\beta + \varepsilon.
 $$
-This model generalizes the SAR lag model by the $WX\theta$ term which introduces local spatial dependence to the model.
+This model generalizes the SAR lag model by the $WX\theta$ term which introduces local spatial
+dependence to the model.
 
 ```{r}
 # estimate SAR Durbin model with log transformation
@@ -581,17 +588,31 @@ hist(residuals(durbin.log))
 # print model summary
 summary(durbin.log, correlation=TRUE)
 ```
-In this model, the covariates CP,CRIME and now also OPEN have significant p-values, and overall the p-values are lower in this model than the other SAR models considered. Since the Durbin model is the only SAR model we've considered that includes local spatial dependence of the data, it is possible that the local dependence is more significant, or at least that both local and global effects are necessary to describe the spatial dependence.
+In this model, the covariates CP,CRIME and now also OPEN have significant p-values, and overall
+the p-values are lower in this model than the other SAR models considered. Since the Durbin model
+is the only SAR model we've considered that includes local spatial dependence of the data, it is
+possible that the local dependence is more significant, or at least that both local and global
+effects are necessary to describe the spatial dependence.
 
-A final remark on SAR models: we can further generalize the Durbin model to include autoregressive residuals as in the error model. The resulting model generalizes each of the 3 SAR models we have analyzed and assumed the form
+A final remark on SAR models: we can further generalize the Durbin model to include autoregressive
+residuals as in the error model. The resulting model generalizes each of the 3 SAR models we have
+analyzed and assumed the form
 
 $$
 y = \rho Wy + WX\theta + X\beta + (I - \lambda W)^{-1}u.
 $$
 
-While this is the richest SAR model, it also includes the largest number of parameters, making it more costly to evaluate and potentially more difficult to interpret.
+While this is the richest SAR model, it also includes the largest number of parameters, making it
+more costly to evaluate and potentially more difficult to interpret.
 
 ### Likelihood Ratio _Will_
+We compute a likelihood ratio to compare the lag and Durbin models on the log(HOVAL) data
+(I don't know why library(lmtest) is not found when I run the next block. Does anyone else encounter this problem?)
+
+```{r}
+library(lmtest)
+lrtest(lag.log, durbin.log)
+```
 
 ## Conditional Autoregressive Models  _Hanmo_
 
