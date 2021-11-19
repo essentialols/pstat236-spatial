@@ -501,47 +501,65 @@ With a p-value of 0.3559, we fail to reject $H_0$. There does not seem to be any
 
 ### SAR lag and Durbin models _Will_
 
-### SAR lag and Durbin models _Will_
+Next, we compute the SAR lag and SAR Durbin models on the log-transformed housing value
+with the same covariates used for the SAR error model detailed above.
 
-We compute the SAR lag and SAR Durbin models on the log-transformed housing value
-with the same covariates used for the SAR error model in the previous section.
+The SAR lag model assumes the form
+$$
+y = \rho W y + X\beta + \varepsilon,
+$$
+where $W$ is the neighbor matrix and $\rho$ is a real parameter that further controls the interaction strength between teh data. Like the SAR error model, the SAR lag model is a global spatial model since it is first-order autoregressive. In this model, the autoregressive structure comes from the data $y$ rather than from the residuals.
 
-First we perform OLS regression and perform a (global?) Moran's I to test for
-spatial dependence among the residuals.
-
-(Procedure/code mirrors that in https://www.youtube.com/watch?v=b3HtV2Mhmvk)
 ```{r}
-# define formula for log of HOVAL with covariates INC,CRIME,OPEN,CP
-hoval.log <- log(HOVAL) ~ INC+CRIME+OPEN+CP
+# make simple feature to neighborhood
+columbus.nb <- poly2nb(columbus.sf)
 
-# ordinary least squares regression
-regOLS = lm(hoval.log,data=columbus.sf)
-summary(regOLS)
-lm.morantest(regOLS,lw)
-lm.LMtests(regOLS,lw,test="all")
+# make neighborhood to list of weights
+lw <- nb2listw(columbus.nb, style="W")
+
+# estimate error SAR model without transformation
+lag <- lagsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
+ lw, Durbin=FALSE)
+
+# look at the residuals
+hist(residuals(lag))
 ```
 
-The p-value of 0.002169 for the Moran's I statistic suggests spatial
-dependence among residuals. Next we perform the SAR tests. The SAR lag model assumes the form
-$y = \rho W y + X\beta + \varepsilon$, and is a global model since $y$ implicitly depends on
-each location.
+
+As before, we see that the residuals are not normally distributed, so we log-transform HOVAL.
+
 
 ```{r}
-library(rgdal)
-
-
-
-# estimate SAR lag model with log transformation
-lag.log <- lagsarlm(formula=hoval.log,data=columbus.sf,listw=lw,Durbin=FALSE)
-
+# estimate error SAR model with log transformation
+lag.log <- lagsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
+ lw, Durbin = FALSE)
 
 hist(residuals(lag.log))
 
+# print model summary
 summary(lag.log, correlation=TRUE)
 ```
 
-The spatial Durbin model (SDM) takes the form $y = \rho Wy + \alpha\iota +X\beta + WX\theta + \varepsilon$,
-which differs from the lag model primarily by dependence on Wx (Lesage, "an Introduction to Spatial Econometrics).
+As with the error model, the CRIME and OPEN covariates have the lowest p-values. However for this model, only OPEN
+falls below the threshold p-value of 0.05, whereas CRIME gave the lowest p-value in the SAR error model.
+The p-values are higher than those in the error model for all covariates except OPEN., indicating less spatial correlation overall.
+
+Finally, we test for spatial dependence among the residuals.
+
+```{r}
+# Run Moran's I test for col.errW.eig.log
+moran.test(residuals(lag.log), lw) # not significant
+```
+
+The p-value is 0.05942, we cannot conclude that there is residual spatial dependence.
+
+
+
+The spatial Durbin model (SDM) takes the form
+$$
+y = \rho Wy + WX\theta + X\beta + \varepsilon.
+$$
+This model generalizes the SAR lag model by the $WX\theta$ term which introduces local spatial dependence to the model.
 
 ```{r}
 # estimate SAR Durbin model with log transformation
@@ -550,9 +568,30 @@ durbin.log <- lagsarlm(formula=hoval.log,data=columbus.sf,listw=lw,Durbin=TRUE)
 hist(residuals(durbin.log))
 ```
 
-### Likelihood Ratio _Will_
+We use this model on the log-transformed housing data as before:
 
-### Model comparisons  _Will_
+
+```{r}
+# estimate Durbin model with log transformation
+durbin.log <- lagsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
+ lw, Durbin = TRUE)
+
+hist(residuals(durbin.log))
+
+# print model summary
+summary(durbin.log, correlation=TRUE)
+```
+In this model, the covariates CP,CRIME and now also OPEN have significant p-values, and overall the p-values are lower in this model than the other SAR models considered. Since the Durbin model is the only SAR model we've considered that includes local spatial dependence of the data, it is possible that the local dependence is more significant, or at least that both local and global effects are necessary to describe the spatial dependence.
+
+A final remark on SAR models: we can further generalize the Durbin model to include autoregressive residuals as in the error model. The resulting model generalizes each of the 3 SAR models we have analyzed and assumed the form
+
+$$
+y = \rho Wy + WX\theta + X\beta + (I - \lambda W)^{-1}u.
+$$
+
+While this is the richest SAR model, it also includes the largest number of parameters, making it more costly to evaluate and potentially more difficult to interpret.
+
+### Likelihood Ratio _Will_
 
 ## Conditional Autoregressive Models  _Hanmo_
 
