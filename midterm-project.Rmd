@@ -2,22 +2,25 @@
 title: "Areal Data Group Project"
 author: "Kayla, Ingmar, Hanmo, Will"
 date: "`r Sys.Date()`"
-output: 
+output:
   html_document:
-    keep_md: true
-    toc: true
-    toc_float: true
+    keep_md: yes
+    toc: yes
+    toc_float: yes
     toc_depth: 3
-bibliography: references.bib
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+bibliography: [packages.bib, references.bib]
 ---
-
+\newpage
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache=T)
 ```
 
 # Set up
 
-**resources we are referencing:  
+Resources we are referencing:  
 
 - http://www.css.cornell.edu/faculty/dgr2/_static/files/ov/ov_ADSA_Handout.pdf  
 - Banerjee, Carlin and Gelfand, Hierarchical Modeling and Analysis for Spatial Data, 1st Edition, Ch 3  
@@ -26,7 +29,6 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 The packages we used are:  
 ```{r}
-# install.packages(c("sp", "raster", "spdep", ....))
 library(tidyverse)
 library(sp)
 library(terra)
@@ -102,7 +104,7 @@ hist(df.columbus$CP,
 plot(columbus, col = mycols, main = "core vs Periphery (roughly urban vs rural)") 
 ```
 
-Because we plan to use housing value as our response variable try a transformation.  
+Because we plan to use housing value as our response variable, a logarithm transformation is applied to fix the skewness of the distribution for the variable housing value.  
 ```{r}
 hist(log10(df.columbus$HOVAL), 
      main = "Housing value", 
@@ -113,7 +115,7 @@ hist(log10(df.columbus$HOVAL),
 
 ## Measures of spatial association  
 
-### Neighbors _Kayla_  
+### Neighbors  
 Because measures of spatial association are dependent on which neighborhoods are next to each other (or close to each other) we need to create an adjacency matrix to use in the models and test for spatial autocorrelation.
 
 Figure out what the neighbors are:  
@@ -133,7 +135,7 @@ Here is what part of the adjacency matrix looks like:
 head(adjacent(columbus, "touches", pairs = FALSE))
 ```
 
-### Moran's I - _Kayla_  
+### Moran's I  
 
 Using `terra` to test for spatial autocorrelation of the variable, by county in Columbus, OH. 
 
@@ -251,9 +253,9 @@ mi.p[5] <- "*"
 
 There is significant spatial autocorrelation with plumbing (Moran's I = `r ac`, p < 0.05).
 
-### Geary's C  _Ingmar & Kayla_  
+### Geary's C
 
-N is the number of spatial units indexed by {\displaystyle i}i and {\displaystyle j}j; {\displaystyle x}x is the variable of interest; {\displaystyle {\bar {x}}}{\bar {x}} is the mean of {\displaystyle x}x; {\displaystyle w_{ij}}w_{ij} is a matrix of spatial weights with zeroes on the diagonal (i.e., {\displaystyle w_{ii}=0}{\displaystyle w_{ii}=0}); and {\displaystyle W}W is the sum of all {\displaystyle w_{ij}}w_{ij}.
+$N$ is the number of spatial units indexed by i and j; x is the variable of interest; $\bar{x}$ is the mean of $x$; $w_{ij}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., $w_{ii}=0$); and $W$ is the sum of all $w_{ij}$.
 $$
 C=\frac{(n-1) \sum_{i} \sum_{j} w_{i j}\left(y_{i}-y_{j}\right)^{2}}{2\left(\sum_{i \neq j} w_{i j}\right) \sum_{i}\left(y_{i}-\bar{y}\right)^{2}}
 $$
@@ -364,7 +366,7 @@ There are differences observed in spatial autocorrelation in the data calculated
 
 # Spatial regression models
 
-## Constant means _Ingmar_
+## Constant means
 
 We decide to model the `HOVAL` (home value) variable for all of our models. The simplest, yet naive, model is the constant means model, which is essentially an intercept-only model, i.e. the average of the `HOVAL` variable.
 
@@ -394,9 +396,9 @@ zero.means.log <- lm(log(HOVAL) ~ 1, data=columbus.sf)
 summary(zero.means.log)
 ```
 
-We find that the model estimates `log(HOVAL)` to be 3.55231, which is \$`r round(exp(3.55231)*1000)` after exponentiating.
+We find that the model estimates `log(HOVAL)` to be 3.55231, which is $\$$ `r round(exp(3.55231)*1000)` after exponentiating.
 
-## Linear Model with Independent Residuals _Ingmar_
+## Linear Model with Independent Residuals
 
 Improving over the zero means model, we model the home value `HOVAL` as a linear function of its (non-spatial) covariates with i.i.d. errors.
 
@@ -422,7 +424,7 @@ The diagnostic plots suggests that the assumptions of regression are not satisfi
 
 ## Simultaneous Autoregressive Models  
 
-### SAR error model _Ingmar_
+### SAR error model
 
 Use global moran's i to test model residuals for spatial correlation
 `lm.morantest()`
@@ -494,7 +496,7 @@ moran.test(residuals(col.errW.eig.log), lw) # not significant
 
 With a p-value of 0.3559, we fail to reject $H_0$. There does not seem to be any spatial dependence present in the residuals of our error model.
 
-### SAR lag and Durbin models _Will_
+### SAR lag and Durbin models
 
 Next, we compute the SAR lag and SAR Durbin models on the log-transformed housing value
 with the same covariates used for the SAR error model.
@@ -576,7 +578,7 @@ y = \rho Wy + WX\theta + X\beta + (I - \lambda W)^{-1}u.
 $$
 
 
-### Likelihood Ratio _Will_
+### Likelihood Ratio
 
 Since the SAR error and SAR lag models are special cases of the SAR Durbin model, we compare the performance of these models via likelihood ratio tests. These tests take the form
 $$
@@ -597,7 +599,7 @@ The first value of 0.336 is very large, so we cannot reject the null-hypothesis 
 The second value of 0.08439 is lower but still above 0.05, so again we cannot reject the hypothesis that the lag model fits the data. This seems to imply that the class of SAR error model outperforms the SAR lag model on our data.
 
 
-## Conditional Autoregressive Models  _Hanmo_
+## Conditional Autoregressive Models
 
 In the next step, we implement the conditional autoregressive (CAR) model on the Columbus data to study the impact of covariates on House values in Columbus, OH, 1980 with spatial information. 
 
@@ -643,6 +645,7 @@ set.seed(2021)
 ```
 
 ```{r echo=F}
+loglik_temp = round(logLik(car_model_gaussian), 2)
 # print(paste0("The log likehood is ", round(logLik(car_model_gaussian), 2)))
 # INC+CRIME+DISCBD+X+Y+PERIMETER+CP 13.59
 ```
@@ -650,10 +653,10 @@ set.seed(2021)
 
 
 ```{r echo=F}
-betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
-resultsCAR1 <- betas1$quantiles
-rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
-knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
+# betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
+# resultsCAR1 <- betas1$quantiles
+# rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
+# knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
 
 # print(paste0("The MSE is ", round(sqrt(sum((exp(car_model_gaussian$fitted.values) - df.columbus_CAR$HOVAL)^2)), 2)))
 
@@ -662,9 +665,9 @@ plot(x = df.columbus_CAR$HOVAL, y = exp(car_model_gaussian$fitted.values), type=
 abline(0,1)
 ```
 
-The log likelihood of this model is 17.97  while the training root mean square error (RMSE) is 59.46. From the table of $95\%$ confidence intervals for coefficients, we have
+The log likelihood of this model is 17.97  while the training root mean square error (RMSE) is 52.6. From the table of $95\%$ confidence intervals for coefficients, we have
 
-* *CRIME* and *PLUMB* are the two variables that is significant since their confidence intervals don't have zero involved.
+* *CRIME* and *OPEN* are the two variables that is significant since their confidence intervals don't have zero involved.
 * Hold other predictors fixed, regions with **less crimes** tend to have higher *House values*.
 * Hold other predictors fixed, regions with **higher household incomes** tend to have higher *House values*.
 * Hold other predictors fixed, regions with **more open area** tend to have higher *House values*.
@@ -686,16 +689,16 @@ Moran.I(residuals(car_model_gaussian), ww)$p.value
 We also tested the Moran's I autocorrelation coefficient for the residuals. It shows there is **no** significant spatial correlation of the residuals since the p-value $p = 0.1 > 0.05$. Therefore, our CAR model fits the areal data nicely and leaves no significant spatial information in the residuals.
  
 
-# Conclusions _Kayla_  
+# Conclusions
 
 From our exploratory analysis and visualizing the data we know the variables of interest, with the exception of open space, have weak to moderate positive spatial autocorrelation, meaning neighboring polygons are more similar to each other than the dataset as a whole. All of the models we tried did not have significant ($\alpha = 0.05$) spatial autocorrelation. 
 
 We found that across all of our models average house value significantly increased with open space (units unknown). In some of the models (SAR, DURBIN, CAR) housing value decreased significantly with crime (per 1000 households). In the durbin log model and CAR model the effect of being located in an urban (core) neighborhood was also negative. 
 
-The best fit model by log likelihood was the CAR model. There was no significant difference in fit between the SAR lag and Durbin models. *** I can't figure out how to compare those to the CAR using lrtest.
+The best fit model by log likelihood was the CAR model. There was no significant difference in fit between the SAR lag and Durbin models.
 
 # References  
-
+<!--
 ## Packages used  
 
 ```{r}
@@ -711,6 +714,11 @@ citation("sp")
 ```
 
 ## Paper's referenced and other resources  
+--> 
+
+```{r, include=FALSE}
+knitr::write_bib(file = 'packages.bib')
+```
 
 ---
 nocite: '@*'
