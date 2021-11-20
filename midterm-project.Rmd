@@ -348,7 +348,7 @@ gc[5] <- gearyc
 No significant spatial autocorrelation (geary's c = `r gearyc`, p > 0.05).  
 
 ### Compare Moran's I and Geary's C  
-Reinhard Furrer (http://user.math.uzh.ch/furrer/download/sta330/script_sta330.pdf, Version May 26, 2021) suggests to take 1-C to compare it to Moran's I more easily.  
+Reinhard Furrer [@Furrer] suggests to take 1-C to compare it to Moran's I more easily.  
 ```{r, echo=FALSE}
 m <- data.frame(Morans_I = mi,
                 signif = mi.p,
@@ -415,7 +415,7 @@ summary(col.lm)
 
 ```{r}
 par(mfrow=c(2,2))
-plot(col.lm)
+plot(col.lm, main = "Diagnostic Plots for Linear Model")
 ```
 
 The diagnostic plots suggests that the assumptions of regression are not satisfied, which is to be expected since we know that most areal data is spatially dependent.
@@ -467,7 +467,7 @@ col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
  lw, method="eigen", quiet=T)
 
 # look at the residuals
-hist(residuals(col.errW.eig))
+hist(residuals(col.errW.eig), main = "Histogram of Residuals of Error SAR Model", xlab = "Residuals of Error SAR Model")
 ```
 
 The residuals are not normally distributed. We therefore, log-transform the response to normalize them.
@@ -477,7 +477,7 @@ The residuals are not normally distributed. We therefore, log-transform the resp
 col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
  lw, method="eigen", quiet=T)
 
-hist(residuals(col.errW.eig.log))
+hist(residuals(col.errW.eig.log), main = "Histogram of Residuals of Error SAR Model (Logged Response)", xlab = "Residuals of Error SAR Model (Logged Response)")
 
 # print model summary
 summary(col.errW.eig.log, correlation=TRUE)
