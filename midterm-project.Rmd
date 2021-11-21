@@ -403,10 +403,10 @@ We find that the model estimates `log(HOVAL)` to be 3.55231, which is $\$$ `r ro
 Improving over the zero means model, we model the home value `HOVAL` as a linear function of its (non-spatial) covariates with i.i.d. errors.
 
 $$
-\mathbf{Y} = \mathbf{X}\beta + \varepsilon
+\mathbf{Y} = \mathbf{X}\mathbf{\beta} + \mathbf{\varepsilon}
 $$
 
-where X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). 
+where X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
 
 We estimate the model with
 
