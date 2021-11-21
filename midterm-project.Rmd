@@ -426,9 +426,6 @@ The diagnostic plots suggests that the assumptions of regression are not satisfi
 
 ### SAR error model
 
-Use global moran's i to test model residuals for spatial correlation
-`lm.morantest()`
-
 To address the shortcomings of the linear model under the assumption of i.i.d. errors, we introduce __Simultaneous Autoregressive Models__. The models solve simultaneously for the regression coefficients and for the autoregressive error structure. In the __Spatial Error Model__, spatial autocorrelation enters in the specification only through the error terms.
 
 To derive the model, we formulate the error as a first-order spatial autoregressive process
