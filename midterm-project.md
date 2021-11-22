@@ -1,7 +1,7 @@
 ---
 title: "Areal Data Group Project"
 author: "Kayla, Ingmar, Hanmo, Will"
-date: "2021-11-20"
+date: "2021-11-21"
 output:
   html_document:
     keep_md: yes
@@ -568,10 +568,10 @@ We find that the model estimates `log(HOVAL)` to be 3.55231, which is $\$$ 3.489
 Improving over the zero means model, we model the home value `HOVAL` as a linear function of its (non-spatial) covariates with i.i.d. errors.
 
 $$
-\mathbf{Y} = \mathbf{X}\beta + \varepsilon
+\mathbf{Y} = \mathbf{X}\mathbf{\beta} + \mathbf{\varepsilon}
 $$
 
-where X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). 
+where X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
 
 We estimate the model with
 
@@ -617,9 +617,6 @@ The diagnostic plots suggests that the assumptions of regression are not satisfi
 ## Simultaneous Autoregressive Models  
 
 ### SAR error model
-
-Use global moran's i to test model residuals for spatial correlation
-`lm.morantest()`
 
 To address the shortcomings of the linear model under the assumption of i.i.d. errors, we introduce __Simultaneous Autoregressive Models__. The models solve simultaneously for the regression coefficients and for the autoregressive error structure. In the __Spatial Error Model__, spatial autocorrelation enters in the specification only through the error terms.
 

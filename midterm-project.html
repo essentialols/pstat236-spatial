@@ -11,7 +11,7 @@
 
 <meta name="author" content="Kayla, Ingmar, Hanmo, Will" />
 
-<meta name="date" content="2021-11-20" />
+<meta name="date" content="2021-11-21" />
 
 <title>Areal Data Group Project</title>
 
@@ -1495,7 +1495,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Areal Data Group Project</h1>
 <h4 class="author">Kayla, Ingmar, Hanmo, Will</h4>
-<h4 class="date">2021-11-20</h4>
+<h4 class="date">2021-11-21</h4>
 
 </div>
 
@@ -1846,9 +1846,9 @@ summary(zero.means.log)</code></pre>
 <h2>Linear Model with Independent Residuals</h2>
 <p>Improving over the zero means model, we model the home value <code>HOVAL</code> as a linear function of its (non-spatial) covariates with i.i.d. errors.</p>
 <p><span class="math display">\[
-\mathbf{Y} = \mathbf{X}\beta + \varepsilon
+\mathbf{Y} = \mathbf{X}\mathbf{\beta} + \mathbf{\varepsilon}
 \]</span></p>
-<p>where X is a matrix of the predictors <code>INC</code> (income), <code>CRIME</code>, <code>OPEN</code> (open space in neighborhood), and <code>CP</code> (whether the neighborhood is in the center or periphery).</p>
+<p>where X is a matrix of the predictors <code>INC</code> (income), <code>CRIME</code>, <code>OPEN</code> (open space in neighborhood), and <code>CP</code> (whether the neighborhood is in the center or periphery). <span class="math inline">\(\beta\)</span> is a vector of coefficients and <span class="math inline">\(\varepsilon\)</span> is a vector of random, normally distributed errors.</p>
 <p>We estimate the model with</p>
 <pre class="r"><code>col.lm &lt;- lm(HOVAL~INC+CRIME+OPEN, data=columbus.sf)
 summary(col.lm)</code></pre>
@@ -1881,7 +1881,6 @@ plot(col.lm, main = &quot;Diagnostic Plots for Linear Model&quot;)</code></pre>
 <h2>Simultaneous Autoregressive Models</h2>
 <div id="sar-error-model" class="section level3">
 <h3>SAR error model</h3>
-<p>Use global moran’s i to test model residuals for spatial correlation <code>lm.morantest()</code></p>
 <p>To address the shortcomings of the linear model under the assumption of i.i.d. errors, we introduce <strong>Simultaneous Autoregressive Models</strong>. The models solve simultaneously for the regression coefficients and for the autoregressive error structure. In the <strong>Spatial Error Model</strong>, spatial autocorrelation enters in the specification only through the error terms.</p>
 <p>To derive the model, we formulate the error as a first-order spatial autoregressive process</p>
 <p><span class="math display">\[\begin{equation}
