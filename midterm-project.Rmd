@@ -17,7 +17,6 @@ bibliography: [packages.bib, references.bib]
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache=T)
 ```
-
 # Set up
 
 Resources we are referencing:  
@@ -39,7 +38,63 @@ library(ape)
 library(lmtest)
 ```
 
-The dataset we are using is published in `spData` and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
+# Introduction to Areal Data  
+
+Areal data is spatial data which is observed or reported for spatial units which are polygons with defined boarders. Some examples are country level data, state level data, county level data, or zip code level data where the data is aggreated for the defined area. This is often the case for private information (i.e. mean income in a zip code instead of income of each individual with their address), or data the is collected at that scale (i.e. proportion of democratic voters in an electoral unit; Bivand et al., 2013).  
+
+Some of the common problems we have with areal data have to do with the selected boundary. For example, gerrymandering is a common issue with votes because changing the boundaries yields different election results. Another issue is the choice of boundaries is often not made for the specific question being asked in the model. Bivand et al., 2013 gives the example of zipcodes which are a common unit for demographic data to be reported in, but were designed for postal delivery not demographic data collection. The boundaries not fitting the underlying patterns in the data can cause model misspecification, spatial autocorrelation, and make it difficult to assertain the number of independant observations in a datasete. Therefore, it is important to check for spatial pattterning due to this partitioning to see if the model indicated is appropriate (Bivand et al., 2013).  
+
+## Neighbors and weights  
+
+Because we do not have a continuous surface on which to calculate distance between points to build a variogram we must consider neighbors instead. There are many ways to describe neighbors and build a **weight matrix**.  Here are a few _(I didn't run this yet so might not do what I think it will)_:  
+
+```{r, echo = FALSE, out.width = "25%"}
+# Dummy data
+x <- seq(1,25)
+y <- seq(1,25)
+data <- expand.grid(X=x, Y=y)
+
+data$Z <- c(0, 0, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 1, 2, 1, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 0, 0,)
+ggplot(data, aes(X, Y, fill= Z)) + 
+  geom_tile() + ggtitle("rook")
+
+data$Z <- c(0, 0, 0, 0, 0,
+            0, 1, 1, 1, 0,
+            0, 1, 2, 1, 0,
+            0, 1, 1, 1, 0,
+            0, 0, 0, 0, 0,)
+ggplot(data, aes(X, Y, fill= Z)) + 
+  geom_tile() + ggtitle("queen/touches")
+
+data$Z <- c(0, 0, 0, 0, 0,
+            0, 1, 0, 1, 0,
+            0, 0, 2, 0, 0,
+            0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0,)
+ggplot(data, aes(X, Y, fill= Z)) + 
+  geom_tile() + ggtitle("bishop")
+  
+data$Z <- c(1, 0, 1, 0, 1,
+            0, 1, 1, 1, 0,
+            1, 1, 2, 1, 1,
+            0, 1, 1, 1, 0,
+            1, 0, 1, 0, 1,)
+ggplot(data, aes(X, Y, fill= Z)) + 
+  geom_tile() + ggtitle("more!")
+```
+
+So by looking at our dataset and understanding what the expected relationships are between neighbors we can build a weight matrix. After we do our analysis we also need to check the residuals to ensure we removed the spatial patterns.  
+
+## more background on models??  
+
+
+# Our dataset  
+
+The dataset we are using is published in `spData` and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._  
 ```{r}
 ## load dataset
 columbus <- vect(system.file("shapes/columbus.shp", package="spData")[1])
@@ -128,14 +183,24 @@ p2 <- xy[neighbors[,2], ]
 lines(p1, p2, col='red', lwd=2)
 ```
 
-There are a few options when making the adjecency matrix, but for our purposes we are saying that any counties touching each other are neighbors (1s) and any that aren't are not (0s).  
+There are a few options when making the adjecency matrix, but for our purposes we are saying that any counties touching each other are neighbors (1s) and any that aren't are not (0s). This is the neighbor schema shown in the queen/touches plot above.    
 
-Here is what part of the adjacency matrix looks like:    
+Using that neighbor list we can construct a weight matrix ($w_{ij} looks like where if $i$ is a neighbor of $j$ the corresponding value in the matrix is 1 and if $i$ is not a neighbor of $j$ the corresponding value in the matrix is 0. 
 ```{r}
 head(adjacent(columbus, "touches", pairs = FALSE))
 ```
 
+Using this weight matrix we can then test for spatial autocorrelation.  
+
 ### Moran's I  
+
+The assumptions for this test are (Bivand et al., 2013):  
+
+* " the mean model of the data removes systematic spatial patterning from the data"   
+* the observed spatial autocorrelation is not due to an underlying process in our model  
+
+Some limitations for Moran's I are   
+* 
 
 Using `terra` to test for spatial autocorrelation of the variable, by county in Columbus, OH. 
 
