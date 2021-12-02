@@ -12,6 +12,8 @@ output:
     toc: yes
     toc_depth: '3'
 bibliography: [packages.bib, references.bib]
+editor_options: 
+  chunk_output_type: console
 ---
 \newpage
 ```{r setup, include=FALSE}
@@ -42,7 +44,7 @@ library(lmtest)
 
 Areal data is spatial data which is observed or reported for spatial units which are polygons with defined boarders. Some examples are country level data, state level data, county level data, or zip code level data where the data is aggreated for the defined area. This is often the case for private information (i.e. mean income in a zip code instead of income of each individual with their address), or data the is collected at that scale (i.e. proportion of democratic voters in an electoral unit; Bivand et al., 2013).  
 
-Some of the common problems we have with areal data have to do with the selected boundary. For example, gerrymandering is a common issue with votes because changing the boundaries yields different election results. Another issue is the choice of boundaries is often not made for the specific question being asked in the model. Bivand et al., 2013 gives the example of zipcodes which are a common unit for demographic data to be reported in, but were designed for postal delivery not demographic data collection. The boundaries not fitting the underlying patterns in the data can cause model misspecification, spatial autocorrelation, and make it difficult to assertain the number of independant observations in a datasete. Therefore, it is important to check for spatial pattterning due to this partitioning to see if the model indicated is appropriate (Bivand et al., 2013).  
+Some of the common problems we have with areal data have to do with the selected boundary. For example, gerrymandering is a common issue with votes because changing the boundaries yields different election results. Another issue is the choice of boundaries is often not made for the specific question being asked in the model. Bivand et al., 2013 gives the example of zipcodes which are a common unit for demograpsic data to be reported in, but were designed for postal delivery not demograpsic data collection. The boundaries not fitting the underlying patterns in the data can cause model misspecification, spatial autocorrelation, and make it difficult to assertain the number of independant observations in a datasete. Therefore, it is important to check for spatial pattterning due to this partitioning to see if the model indicated is appropriate (Bivand et al., 2013).  
 
 ## Neighbors and weights  
 
@@ -58,7 +60,7 @@ data$Z <- c(0, 0, 0, 0, 0,
             0, 0, 1, 0, 0,
             0, 1, 2, 1, 0,
             0, 0, 1, 0, 0,
-            0, 0, 0, 0, 0,)
+            0, 0, 0, 0, 0)
 ggplot(data, aes(X, Y, fill= Z)) + 
   geom_tile() + ggtitle("rook")
 
@@ -66,7 +68,7 @@ data$Z <- c(0, 0, 0, 0, 0,
             0, 1, 1, 1, 0,
             0, 1, 2, 1, 0,
             0, 1, 1, 1, 0,
-            0, 0, 0, 0, 0,)
+            0, 0, 0, 0, 0)
 ggplot(data, aes(X, Y, fill= Z)) + 
   geom_tile() + ggtitle("queen/touches")
 
@@ -74,7 +76,7 @@ data$Z <- c(0, 0, 0, 0, 0,
             0, 1, 0, 1, 0,
             0, 0, 2, 0, 0,
             0, 1, 0, 1, 0,
-            0, 0, 0, 0, 0,)
+            0, 0, 0, 0, 0)
 ggplot(data, aes(X, Y, fill= Z)) + 
   geom_tile() + ggtitle("bishop")
   
@@ -82,7 +84,7 @@ data$Z <- c(1, 0, 1, 0, 1,
             0, 1, 1, 1, 0,
             1, 1, 2, 1, 1,
             0, 1, 1, 1, 0,
-            1, 0, 1, 0, 1,)
+            1, 0, 1, 0, 1)
 ggplot(data, aes(X, Y, fill= Z)) + 
   geom_tile() + ggtitle("more!")
 ```
@@ -669,56 +671,87 @@ The CAR model essentially assumes the spatial estimation is conditional on the v
 
 
 
-Since we have one response variable *House value*, the CAR model has only one random effect $\phi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
+Since we have one response variable *House value*, the CAR model has only one random effect $\psi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
 
 
 The package *CARBayes* by Duncan Lee is used to apply the CAR model in R. The specific function we use is *S.CARleroux*, where it specifies a CAR model proposed by Brian G. Leroux in 2000. The model expression is as follows. 
 
-* $\mathbf{W}$ is a 0-1 neighborhood or weight matrix
-* $k = 1, \dots, K$ is the index for a certain areal unit
-* $\rho$ is a spatial correlation parameter, with $\rho=0$ means indenpendence and $\rho=1$ indicates strong spatial correlation
-
-
 $$
-\psi_{k}=\phi_{k}
-$$
-$$
-\phi_{k} \mid \phi_{-k}, \mathbf{W}, \tau^{2}, \rho \sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \phi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right)
+\begin{aligned}
+log(y_{k}) \mid \mu_{k} & \sim N\left(\mu_{k}, \nu^{2}\right) \quad \text { for } k=1, \ldots, K \\
+g\left(\mu_{k}\right) &=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\psi_{k}
+\end{aligned}
 $$
 
 $$
 \begin{aligned}
-\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(a, b) \\
+\psi_{k} \mid \psi_{-k}, \mathbf{W}, \tau^{2}, \rho &\sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \psi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right) \\
+[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T & \sim \mathrm{N}\left(\boldsymbol{0}, 10^5\boldsymbol{I}\right) \\
+\nu^{2} & \sim \operatorname{Inverse-Gamma}(1, 0.01)\\
+\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(1, 0.01) \\
 \rho & \sim \text { Uniform }(0,1)
 \end{aligned}
 $$
+where 
+
+* $[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T$ are the linear coefficients for predictors.
+* $\nu^2$ measures the variance for the logarithm of the housing values ($log(y_k)$).
+* $\psi_k$ is the spatial structure component that measures the spatial autocorrelation.
+* $\mathbf{W}$ is a neighborhood or adjacency matrix.
+* $\rho$ is a spatial correlation parameter, where $\rho=0$ means spatial independence and $\rho=1$ indicates strong spatial correlation.
 
 
-```{r echo=F,cache=T}
+```{r include=F}
 df.columbus_CAR = df.columbus
 df.columbus_CAR$CP = as.factor(df.columbus_CAR$CP)
-ggpairs(data = df.columbus_CAR, columns = c(7, 8:12, 18))
+ggpairs(data = df.columbus_CAR, columns = c(7, 8:10, 12, 18))
 ```
 
 
-```{r cache=T}
+```{r include=FALSE}
 set.seed(2021)
 (car_model_gaussian = CARBayes::S.CARleroux(log(HOVAL)~INC+CRIME+OPEN+DISCBD+CP, data = df.columbus_CAR, family = "gaussian", W = ww, burnin = 100000, n.sample = 300000, thin = 10, verbose = F))
 ```
 
-```{r echo=F}
-loglik_temp = round(logLik(car_model_gaussian), 2)
+```{r include=FALSE}
+# loglik_temp = round(logLik(car_model_gaussian), 2)
 # print(paste0("The log likehood is ", round(logLik(car_model_gaussian), 2)))
 # INC+CRIME+DISCBD+X+Y+PERIMETER+CP 13.59
 ```
 
+```{r echo=FALSE}
+colnames(car_model_gaussian$samples$beta)<- c("Intercept", "INC", "CRIME", "OPEN", "DISCBD", "CP")
+par(mfrow=c(3,4))
+par(mar=c(2,2,2,2))
+for(i in 2:6){
+  cur_parameters = (as.vector(car_model_gaussian$samples$beta[, i]))
+  cur_name = colnames(car_model_gaussian$samples$beta)[i]
+  plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of ", cur_name))
+  plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of ", cur_name))
+}
+par(mfrow=c(2,4))
+par(mar=c(2,2,2,2))
+cur_parameters = sample((as.vector(car_model_gaussian$samples$phi)), 20000)
+plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of psi"))
+plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of psi"))
 
+cur_parameters =  sample((as.vector(car_model_gaussian$samples$tau2)), 20000)
+plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of squared tau"))
+plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of squared tau"))
 
+cur_parameters = sample((as.vector(car_model_gaussian$samples$nu2)), 20000)
+plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of squared nu"))
+plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of squared nu"))
+
+cur_parameters = sample((as.vector(car_model_gaussian$samples$rho)), 20000)
+plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of rho"))
+plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of rho"))
+```
 ```{r echo=F}
-# betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
-# resultsCAR1 <- betas1$quantiles
-# rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
-# knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
+betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
+resultsCAR1 <- round(betas1$quantiles,4)
+rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
+knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
 
 # print(paste0("The MSE is ", round(sqrt(sum((exp(car_model_gaussian$fitted.values) - df.columbus_CAR$HOVAL)^2)), 2)))
 
