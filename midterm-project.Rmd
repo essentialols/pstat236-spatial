@@ -8,19 +8,19 @@ output:
     toc: yes
     toc_float: yes
     toc_depth: 3
+    code_folding: hide
   pdf_document:
     toc: yes
     toc_depth: '3'
 bibliography: [packages.bib, references.bib]
-editor_options: 
-  chunk_output_type: console
 ---
 \newpage
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache=T)
 ```
-# Set up
 
+# Set up
+ 
 Resources we are referencing:  
 
 - http://www.css.cornell.edu/faculty/dgr2/_static/files/ov/ov_ADSA_Handout.pdf  
@@ -40,78 +40,21 @@ library(ape)
 library(lmtest)
 ```
 
-# Introduction to Areal Data  
-
-Areal data is spatial data which is observed or reported for spatial units which are polygons with defined boarders. Some examples are country level data, state level data, county level data, or zip code level data where the data is aggreated for the defined area. This is often the case for private information (i.e. mean income in a zip code instead of income of each individual with their address), or data the is collected at that scale (i.e. proportion of democratic voters in an electoral unit; Bivand et al., 2013).  
-
-Some of the common problems we have with areal data have to do with the selected boundary. For example, gerrymandering is a common issue with votes because changing the boundaries yields different election results. Another issue is the choice of boundaries is often not made for the specific question being asked in the model. Bivand et al., 2013 gives the example of zipcodes which are a common unit for demograpsic data to be reported in, but were designed for postal delivery not demograpsic data collection. The boundaries not fitting the underlying patterns in the data can cause model misspecification, spatial autocorrelation, and make it difficult to assertain the number of independant observations in a datasete. Therefore, it is important to check for spatial pattterning due to this partitioning to see if the model indicated is appropriate (Bivand et al., 2013).  
-
-## Neighbors and weights  
-
-Because we do not have a continuous surface on which to calculate distance between points to build a variogram we must consider neighbors instead. There are many ways to describe neighbors and build a **weight matrix**.  Here are a few _(I didn't run this yet so might not do what I think it will)_:  
-
-```{r, echo = FALSE, out.width = "25%"}
-# Dummy data
-x <- seq(1,25)
-y <- seq(1,25)
-data <- expand.grid(X=x, Y=y)
-
-data$Z <- c(0, 0, 0, 0, 0,
-            0, 0, 1, 0, 0,
-            0, 1, 2, 1, 0,
-            0, 0, 1, 0, 0,
-            0, 0, 0, 0, 0)
-ggplot(data, aes(X, Y, fill= Z)) + 
-  geom_tile() + ggtitle("rook")
-
-data$Z <- c(0, 0, 0, 0, 0,
-            0, 1, 1, 1, 0,
-            0, 1, 2, 1, 0,
-            0, 1, 1, 1, 0,
-            0, 0, 0, 0, 0)
-ggplot(data, aes(X, Y, fill= Z)) + 
-  geom_tile() + ggtitle("queen/touches")
-
-data$Z <- c(0, 0, 0, 0, 0,
-            0, 1, 0, 1, 0,
-            0, 0, 2, 0, 0,
-            0, 1, 0, 1, 0,
-            0, 0, 0, 0, 0)
-ggplot(data, aes(X, Y, fill= Z)) + 
-  geom_tile() + ggtitle("bishop")
-  
-data$Z <- c(1, 0, 1, 0, 1,
-            0, 1, 1, 1, 0,
-            1, 1, 2, 1, 1,
-            0, 1, 1, 1, 0,
-            1, 0, 1, 0, 1)
-ggplot(data, aes(X, Y, fill= Z)) + 
-  geom_tile() + ggtitle("more!")
-```
-
-So by looking at our dataset and understanding what the expected relationships are between neighbors we can build a weight matrix. After we do our analysis we also need to check the residuals to ensure we removed the spatial patterns.  
-
-## more background on models??  
-
-
-# Our dataset  
-
-The dataset we are using is published in `spData` and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._  
+The dataset we are using is published in `spData` and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
 ```{r}
 ## load dataset
 columbus <- vect(system.file("shapes/columbus.shp", package="spData")[1])
 df.columbus <- as.data.frame(columbus)
-glimpse(df.columbus)
 ```
 
 The county data is:  
 
-* HOVAL housing value (in \$1,000)  
-* INC household income (in \$1,000)  
-* CRIME residential burglaries and vehicle thefts per thousand households in the neighborhood  
-* OPEN open space in neighborhood  
-* PLUMB percentage housing units without plumbing  
-* CP core-periphery (an urban rural proxy)  
+* $\texttt{HOVAL}_i$ housing value (in \$1,000) of county $i=1\dots49$
+* $\texttt{INC}_i$ household income (in \$1,000) of county $i=1\dots49$
+* $\texttt{CRIME}_i$ residential burglaries and vehicle thefts per thousand households in the neighborhood of county $i=1\dots49$
+* $\texttt{OPEN}_i$ open space in neighborhood of county $i=1\dots49$
+* $\texttt{PLUMB}_i$ percentage housing units without plumbing of county $i=1\dots49$
+* $\texttt{CP}_i$ core-periphery (an urban rural proxy) is an indicator variable $I_{CP}(i)= \begin{cases}1 & \text { if county } i \text { is in the core } \\ 0 & \text { otherwise }\end{cases}$
 
 Look at some summaries of those metrics: _Kayla_   
 ```{r, echo=FALSE, out.width= "50%"}
@@ -163,6 +106,7 @@ plot(columbus, col = mycols, main = "core vs Periphery (roughly urban vs rural)"
 
 Because we plan to use housing value as our response variable, a logarithm transformation is applied to fix the skewness of the distribution for the variable housing value.  
 ```{r}
+# Make histogram
 hist(log10(df.columbus$HOVAL), 
      main = "Housing value", 
      xlab = "Value  in $1000 (log_10)")
@@ -170,7 +114,7 @@ hist(log10(df.columbus$HOVAL),
 
 # Exploratory Data Analysis  
 
-## Measures of spatial association  
+## Measures of spatial association
 
 ### Neighbors  
 Because measures of spatial association are dependent on which neighborhoods are next to each other (or close to each other) we need to create an adjacency matrix to use in the models and test for spatial autocorrelation.
@@ -185,24 +129,14 @@ p2 <- xy[neighbors[,2], ]
 lines(p1, p2, col='red', lwd=2)
 ```
 
-There are a few options when making the adjecency matrix, but for our purposes we are saying that any counties touching each other are neighbors (1s) and any that aren't are not (0s). This is the neighbor schema shown in the queen/touches plot above.    
+There are a few options when making the adjecency matrix, but for our purposes we are saying that any counties touching each other are neighbors (1s) and any that aren't are not (0s).  
 
-Using that neighbor list we can construct a weight matrix ($w_{ij} looks like where if $i$ is a neighbor of $j$ the corresponding value in the matrix is 1 and if $i$ is not a neighbor of $j$ the corresponding value in the matrix is 0. 
+Here is what part of the adjacency matrix looks like:    
 ```{r}
 head(adjacent(columbus, "touches", pairs = FALSE))
 ```
 
-Using this weight matrix we can then test for spatial autocorrelation.  
-
 ### Moran's I  
-
-The assumptions for this test are (Bivand et al., 2013):  
-
-* " the mean model of the data removes systematic spatial patterning from the data"   
-* the observed spatial autocorrelation is not due to an underlying process in our model  
-
-Some limitations for Moran's I are   
-* 
 
 Using `terra` to test for spatial autocorrelation of the variable, by county in Columbus, OH. 
 
@@ -671,87 +605,56 @@ The CAR model essentially assumes the spatial estimation is conditional on the v
 
 
 
-Since we have one response variable *House value*, the CAR model has only one random effect $\psi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
+Since we have one response variable *House value*, the CAR model has only one random effect $\phi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
 
 
 The package *CARBayes* by Duncan Lee is used to apply the CAR model in R. The specific function we use is *S.CARleroux*, where it specifies a CAR model proposed by Brian G. Leroux in 2000. The model expression is as follows. 
 
+* $\mathbf{W}$ is a 0-1 neighborhood or weight matrix
+* $k = 1, \dots, K$ is the index for a certain areal unit
+* $\rho$ is a spatial correlation parameter, with $\rho=0$ means indenpendence and $\rho=1$ indicates strong spatial correlation
+
+
 $$
-\begin{aligned}
-log(y_{k}) \mid \mu_{k} & \sim N\left(\mu_{k}, \nu^{2}\right) \quad \text { for } k=1, \ldots, K \\
-g\left(\mu_{k}\right) &=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\psi_{k}
-\end{aligned}
+\psi_{k}=\phi_{k}
+$$
+$$
+\phi_{k} \mid \phi_{-k}, \mathbf{W}, \tau^{2}, \rho \sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \phi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right)
 $$
 
 $$
 \begin{aligned}
-\psi_{k} \mid \psi_{-k}, \mathbf{W}, \tau^{2}, \rho &\sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \psi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right) \\
-[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T & \sim \mathrm{N}\left(\boldsymbol{0}, 10^5\boldsymbol{I}\right) \\
-\nu^{2} & \sim \operatorname{Inverse-Gamma}(1, 0.01)\\
-\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(1, 0.01) \\
+\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(a, b) \\
 \rho & \sim \text { Uniform }(0,1)
 \end{aligned}
 $$
-where 
-
-* $[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T$ are the linear coefficients for predictors.
-* $\nu^2$ measures the variance for the logarithm of the housing values ($log(y_k)$).
-* $\psi_k$ is the spatial structure component that measures the spatial autocorrelation.
-* $\mathbf{W}$ is a neighborhood or adjacency matrix.
-* $\rho$ is a spatial correlation parameter, where $\rho=0$ means spatial independence and $\rho=1$ indicates strong spatial correlation.
 
 
-```{r include=F}
+```{r echo=F,cache=T}
 df.columbus_CAR = df.columbus
 df.columbus_CAR$CP = as.factor(df.columbus_CAR$CP)
-ggpairs(data = df.columbus_CAR, columns = c(7, 8:10, 12, 18))
+ggpairs(data = df.columbus_CAR, columns = c(7, 8:12, 18))
 ```
 
 
-```{r include=FALSE}
+```{r cache=T}
 set.seed(2021)
 (car_model_gaussian = CARBayes::S.CARleroux(log(HOVAL)~INC+CRIME+OPEN+DISCBD+CP, data = df.columbus_CAR, family = "gaussian", W = ww, burnin = 100000, n.sample = 300000, thin = 10, verbose = F))
 ```
 
-```{r include=FALSE}
-# loglik_temp = round(logLik(car_model_gaussian), 2)
+```{r echo=F}
+loglik_temp = round(logLik(car_model_gaussian), 2)
 # print(paste0("The log likehood is ", round(logLik(car_model_gaussian), 2)))
 # INC+CRIME+DISCBD+X+Y+PERIMETER+CP 13.59
 ```
 
-```{r echo=FALSE}
-colnames(car_model_gaussian$samples$beta)<- c("Intercept", "INC", "CRIME", "OPEN", "DISCBD", "CP")
-par(mfrow=c(3,4))
-par(mar=c(2,2,2,2))
-for(i in 2:6){
-  cur_parameters = (as.vector(car_model_gaussian$samples$beta[, i]))
-  cur_name = colnames(car_model_gaussian$samples$beta)[i]
-  plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of ", cur_name))
-  plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of ", cur_name))
-}
-par(mfrow=c(2,4))
-par(mar=c(2,2,2,2))
-cur_parameters = sample((as.vector(car_model_gaussian$samples$phi)), 20000)
-plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of psi"))
-plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of psi"))
 
-cur_parameters =  sample((as.vector(car_model_gaussian$samples$tau2)), 20000)
-plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of squared tau"))
-plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of squared tau"))
 
-cur_parameters = sample((as.vector(car_model_gaussian$samples$nu2)), 20000)
-plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of squared nu"))
-plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of squared nu"))
-
-cur_parameters = sample((as.vector(car_model_gaussian$samples$rho)), 20000)
-plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of rho"))
-plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of rho"))
-```
 ```{r echo=F}
-betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
-resultsCAR1 <- round(betas1$quantiles,4)
-rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
-knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
+# betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
+# resultsCAR1 <- betas1$quantiles
+# rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
+# knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
 
 # print(paste0("The MSE is ", round(sqrt(sum((exp(car_model_gaussian$fitted.values) - df.columbus_CAR$HOVAL)^2)), 2)))
 
