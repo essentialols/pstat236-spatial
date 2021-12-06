@@ -1,6 +1,6 @@
 ---
 title: "Areal Data Group Project"
-author: "Kayla, Ingmar, Hanmo, Will"
+author: "Kayla, Ingmar, Hanmo"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -16,7 +16,7 @@ bibliography: [packages.bib, references.bib]
 ---
 \newpage
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache=T)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache=F)
 ```
 ```{r setup2, include=FALSE}
 # Resources we are referencing:  
@@ -29,12 +29,11 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache=T)
 # The packages we used are:  
 library(tidyverse)
 library(sp)
-library(terra)
 library(spdep)
 library(sf)
 library(GGally)
 library(ape)
-library(lmtest)
+library(terra)
 ```
 
 
@@ -177,7 +176,7 @@ There are a many options when making the adjacency matrix as outlined above, but
 Figure out what the neighbors are, we must decide a few rule. Here we are considering all counties $i=1\dots49$ and $j=1\dots49$ that touch each other to be neighbors and that the relationship is symmetrical (i.e. $w_{ij}$ = $w_{ji}$)   
 
 ```{r}
-xy <- centroids(columbus)
+xy <- terra::centroids(columbus)
 neighbors <- adjacent(columbus, type = "touches", symmetrical=TRUE)
 colnames(neighbors) <- c("i", "j")
 head(neighbors)
@@ -186,6 +185,7 @@ p1 <- xy[neighbors[,1], ]
 p2 <- xy[neighbors[,2], ]
 lines(p1, p2, col='red', lwd=2)
 ```
+
 
 As described above, there are many options when making the adjacency matrix, but for our purposes we are saying that any counties touching each other are neighbors ($w_{ij}$ = 1) and any that are not touching each other are not ($w_{ij}$ = 0).  
 
@@ -437,6 +437,10 @@ knitr::kable(m, format = 'latex', digits = 3)
 There are differences observed in spatial autocorrelation in the data calculated with Moran's I and Geary's C. For both Moran's I and Geary's C there was not significant spatial autocorrelation in Open space. There was significant positive spatial autocorrelation in household income, crime, and plumbing using Moran's I and Geary's C. Housing value only had positive spatial autocorrelation using Moran's I. However the trends are the same (both find weak to moderate positive spatial correlation)  
 
 # Spatial regression models
+```{r, include=FALSE}
+library(lmtest)
+```
+
 
 ## Constant means
 
@@ -567,109 +571,6 @@ moran.test(residuals(col.errW.eig.log), lw) # not significant
 
 With a p-value of 0.3559, we fail to reject $H_0$. There does not seem to be any spatial dependence present in the residuals of our error model.
 
-### SAR lag and Durbin models
-
-Next, we compute the SAR lag and SAR Durbin models on the log-transformed housing value
-with the same covariates used for the SAR error model.
-
-The SAR lag model assumes the form
-$$
-y = \rho W y + X\beta + \varepsilon,
-$$
-where $W$ is the spatial neighbor matrix and $\rho$ is a real parameter that controls the interaction strength between the data. Like the SAR error model, the SAR lag model is a global spatial model since it is autoregressive. In the lag model, the autoregressive structure comes from the data $y$ rather than from the residuals. We histogram the SAR lag residuals below:
-
-```{r}
-# estimate SAR lag model without transformation
-lag <- lagsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
- lw, Durbin=FALSE)
-
-# look at the residuals
-hist(residuals(lag))
-
-# print model summary
-summary(lag, correlation=TRUE)
-```
-
-
-The residuals do not appear normally distributed, so we log-transform the housing variable as before.
-
-
-```{r}
-# estimate SAR lag model with log transformation
-lag.log <- lagsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
- lw, Durbin = FALSE)
-
-hist(residuals(lag.log))
-
-# print model summary
-summary(lag.log, correlation=TRUE)
-```
-
-As with the error model, the CRIME and OPEN covariates have the lowest p-values. However for this model, only OPEN
-falls below the threshold p-value of 0.05 instead of both OPEN and CRIME in the error model. The lag p-values are higher than those in the error model for all covariates except OPEN, suggesting less spatial correlation among the data overall in the lag
-model.
-
-Next we test for spatial dependence among the residuals.
-
-```{r}
-# Run Moran's I test
-moran.test(residuals(lag.log), lw)
-```
-
-The p-value is 0.05942, so we cannot conclude that there is residual spatial dependence in the lag model. However we note that this p-value is markedly smaller than the p-value of 0.3559 in the error model.
-
-
-
-The spatial Durbin model (SDM) is a generalization of the SAR lag model and takes the form
-$$
-y = \rho Wy + WX\theta + X\beta + \varepsilon.
-$$
-
-The additional term $WX\theta$ term introduces local spatial dependence to the model, where $\theta$ is a new model parameter. Hence, SDM in principle can capture both local and global dependence among the data.
-
-We use this model on the log-transformed housing data as before:
-
-
-```{r}
-# estimate Durbin model with log transformation
-durbin.log <- lagsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
- lw, Durbin = TRUE)
-
-hist(residuals(durbin.log))
-
-# print model summary
-summary(durbin.log, correlation=TRUE)
-```
-In this model, the covariates CP,CRIME and now also OPEN have significant p-values, and overall the p-values are lower in this model than the other SAR models considered. Since the Durbin model is the only SAR model we've considered that includes local spatial dependence of the data, it is possible that the local dependence is more significant, or at least that both local and global effects are necessary to describe the spatial dependence of the data.
-
-A final remark on SAR models: we can further generalize the Durbin model to include autoregressive residuals as seen in the error model. The resulting model generalizes each of the 3 SAR models we have analyzed and assumes the form
-
-$$
-y = \rho Wy + WX\theta + X\beta + (I - \lambda W)^{-1}u.
-$$
-
-
-### Likelihood Ratio
-
-Since the SAR error and SAR lag models are special cases of the SAR Durbin model, we compare the performance of these models via likelihood ratio tests. These tests take the form
-$$
-\lambda_{\mathrm{LR}}=-2 \ln \left[\frac{\sup _{\theta \in \Theta_{0}} \mathcal{L}(\theta)}{\sup _{\theta \in \Theta} \mathcal{L}(\theta)}\right],
-$$
-
-where $\Theta_0$ denotes the restricted parameter space of the restricted model (in our case, error or lag models) and $\Theta$ denotes the full parameter space of the general model (in our case, the Durbin model).
-
-We compare the error SAR, SAR lag and SAR Durbin models on the log(HOVAL) data with identical covariates INC, CRIME, OPEN and CP using likelihood ratios below:
-
-```{r}
-library(lmtest)
-
-lrtest(col.errW.eig.log,durbin.log) # error vs. Durbin
-lrtest(lag.log, durbin.log)         # lag vs. Durbin
-```
-The first value of 0.336 is very large, so we cannot reject the null-hypothesis that the error model fits the data.
-The second value of 0.08439 is lower but still above 0.05, so again we cannot reject the hypothesis that the lag model fits the data. This seems to imply that the class of SAR error model outperforms the SAR lag model on our data.
-
-
 ## Conditional Autoregressive Models
 
 In the next step, we implement the conditional autoregressive (CAR) model on the Columbus data to study the impact of covariates on House values in Columbus, OH, 1980 with spatial information. 
@@ -716,7 +617,7 @@ set.seed(2021)
 ```
 
 ```{r echo=F}
-loglik_temp = round(logLik(car_model_gaussian), 2)
+# loglik_temp = round(logLik(car_model_gaussian), 2)
 # print(paste0("The log likehood is ", round(logLik(car_model_gaussian), 2)))
 # INC+CRIME+DISCBD+X+Y+PERIMETER+CP 13.59
 ```
@@ -746,14 +647,14 @@ The log likelihood of this model is 17.97  while the training root mean square e
 * Hold other predictors fixed, **core** regions tend to have higher *House values*.
 
 ```{r echo=F}
-cc <- cut(residuals(car_model_gaussian), 10)
+cc <- cut(car_model_gaussian$residuals[,1], 10)
 mycols <- pal[as.numeric(cc)]
 plot(columbus, col = mycols, main = "Residuals")
 ```
 
 ```{r}
 # Moran I
-Moran.I(residuals(car_model_gaussian), ww)$p.value
+Moran.I(car_model_gaussian$residuals[,1], ww)$p.value
 ```
 
 

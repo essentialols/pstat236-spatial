@@ -1,7 +1,7 @@
 ---
 title: "Areal Data Group Project"
-author: "Kayla, Ingmar, Hanmo, Will"
-date: "2021-12-02"
+author: "Kayla, Ingmar, Hanmo"
+date: "2021-12-06"
 output:
   html_document:
     keep_md: yes
@@ -9,36 +9,32 @@ output:
     toc_float: yes
     toc_depth: 3
     code_folding: hide
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
 bibliography: [packages.bib, references.bib]
 ---
 \newpage
 
 
-# Set up
 
-Resources we are referencing:  
 
-- http://www.css.cornell.edu/faculty/dgr2/_static/files/ov/ov_ADSA_Handout.pdf  
-- Banerjee, Carlin and Gelfand, Hierarchical Modeling and Analysis for Spatial Data, 1st Edition, Ch 3  
-- Bivand et al 2013 Ch 9  
-- rspatial.org  
+# Introduction to Areal Data  
 
-The packages we used are:  
+Areal data is spatial data which is observed or reported for spatial units which are polygons with defined boarders. Some examples are country level data, state level data, county level data, or zip code level data where the data is aggregated for the defined area. This is often the case for private information (i.e. mean income in a zip code instead of income of each individual with their address), or data the is collected at that scale (i.e. proportion of democratic voters in an electoral unit; Bivand et al., 2013).  
 
-```r
-library(tidyverse)
-library(sp)
-library(terra)
-library(spdep)
-library(sf)
-library(GGally)
-library(ape)
-library(lmtest)
-```
+Some of the common problems we have with areal data have to do with the selected boundary. For example, gerrymandering is a common issue with votes because changing the boundaries yields different election results. Another issue is the choice of boundaries is often not made for the specific question being asked in the model. Bivand et al., 2013 gives the example of zip codes which are a common unit for demographic data to be reported in, but were designed for postal delivery not demographic data collection. The boundaries not fitting the underlying patterns in the data can cause model misspecification, spatial autocorrelation, and make it difficult to ascertain the number of independent observations in a dataset. Therefore, it is important to check for spatial patterning due to this partitioning to see if the model indicated is appropriate (Bivand et al., 2013).  
 
+## Neighbors and weights  
+
+Because we do not have a continuous surface on which to calculate distance between points to build a variogram we must consider neighbors instead. There are many ways to describe neighbors. Here are a few examples where we considering the neighbors $j$ of the center polygon $i$ where $i$ and $j$ are $1\dots n_{polygons}$, and the polygons $j$ and colored based on if we consider them to be neighbors or not.
+
+<img src="midterm-project_files/figure-html/unnamed-chunk-1-1.png" width="25%" /><img src="midterm-project_files/figure-html/unnamed-chunk-1-2.png" width="25%" /><img src="midterm-project_files/figure-html/unnamed-chunk-1-3.png" width="25%" /><img src="midterm-project_files/figure-html/unnamed-chunk-1-4.png" width="25%" />
+
+Using these neighbor relationships we can create a `weights matrix` based on understanding what the expected relationships are between neighbors we can build a weight matrix. The most simple example of this is where the $w_{ij}$ = 0 if the polygons are not neighbors and $w_{ij}$ = 1 if polygons are neighbors. 
+
+After we do our analysis we also need to check the residuals to ensure we removed the spatial patterns.  
+
+## more background on models??  
+
+# Our dataset  
 The dataset we are using is published in `spData` and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
 
 ```r
@@ -62,6 +58,7 @@ Look at some summaries of those metrics: _Kayla_
 Because we plan to use housing value as our response variable, a logarithm transformation is applied to fix the skewness of the distribution for the variable housing value.  
 
 ```r
+# Make histogram
 hist(log10(df.columbus$HOVAL), 
      main = "Housing value", 
      xlab = "Value  in $1000 (log_10)")
@@ -74,23 +71,26 @@ hist(log10(df.columbus$HOVAL),
 ## Measures of spatial association  
 
 ### Neighbors  
-Because measures of spatial association are dependent on which neighborhoods are next to each other (or close to each other) we need to create an adjacency matrix to use in the models and test for spatial autocorrelation.
+There are a many options when making the adjacency matrix as outlined above, but for our purposes we are saying that any counties touching each other are neighbors (1s) and any that aren't are not (0s). This is the neighbor schema shown in the queen/touches plot above.    
 
-Figure out what the neighbors are:  
+Figure out what the neighbors are, we must decide a few rule. Here we are considering all counties $i=1\dots49$ and $j=1\dots49$ that touch each other to be neighbors and that the relationship is symmetrical (i.e. $w_{ij}$ = $w_{ji}$)   
+
 
 ```r
-xy <- centroids(columbus)
-head(neighbors <- adjacent(columbus, "touches", symmetrical=TRUE))
+xy <- terra::centroids(columbus)
+neighbors <- adjacent(columbus, type = "touches", symmetrical=TRUE)
+colnames(neighbors) <- c("i", "j")
+head(neighbors)
 ```
 
 ```
-##      from to
-## [1,]    1  2
-## [2,]    1  3
-## [3,]    2  3
-## [4,]    2  4
-## [5,]    3  4
-## [6,]    3  5
+##      i j
+## [1,] 1 2
+## [2,] 1 3
+## [3,] 2 3
+## [4,] 2 4
+## [5,] 3 4
+## [6,] 3 5
 ```
 
 ```r
@@ -102,37 +102,44 @@ lines(p1, p2, col='red', lwd=2)
 
 ![](midterm-project_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
-There are a few options when making the adjecency matrix, but for our purposes we are saying that any counties touching each other are neighbors (1s) and any that aren't are not (0s).  
+
+As described above, there are many options when making the adjacency matrix, but for our purposes we are saying that any counties touching each other are neighbors ($w_{ij}$ = 1) and any that are not touching each other are not ($w_{ij}$ = 0).  
 
 Here is what part of the adjacency matrix looks like:    
 
 ```r
-head(adjacent(columbus, "touches", pairs = FALSE))
+adjacent(columbus, "touches", pairs = FALSE)[1:10,1:10]
 ```
 
 ```
-##   1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29
-## 1 0 1 1 0 0 0 0 0 0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 2 1 0 1 1 0 0 0 0 0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 3 1 1 0 1 1 0 0 0 0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 4 0 1 1 0 1 0 0 1 0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 5 0 0 1 1 0 1 0 1 1  0  1  0  0  0  1  1  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 6 0 0 0 0 1 0 0 0 1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-##   30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49
-## 1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 3  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 4  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 5  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-## 6  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
+##    1 2 3 4 5 6 7 8 9 10
+## 1  0 1 1 0 0 0 0 0 0  0
+## 2  1 0 1 1 0 0 0 0 0  0
+## 3  1 1 0 1 1 0 0 0 0  0
+## 4  0 1 1 0 1 0 0 1 0  0
+## 5  0 0 1 1 0 1 0 1 1  0
+## 6  0 0 0 0 1 0 0 0 1  0
+## 7  0 0 0 0 0 0 0 1 0  0
+## 8  0 0 0 1 1 0 1 0 0  0
+## 9  0 0 0 0 1 1 0 0 0  1
+## 10 0 0 0 0 0 0 0 0 1  0
 ```
+From that we can understand that county$_{i=1}$ is touching counties$_{j = 2, 3}$ and not touching counties$_{j=4\dots10}$, because the weights of $w_{1,2}, w_{1,3}$ = 1 and $w_{1,4\dots10}$ = 0.
 
 ### Moran's I  
 
-Using `terra` to test for spatial autocorrelation of the variable, by county in Columbus, OH. 
+The assumptions for this test are (Bivand et al., 2013):  
+
+* " the mean model of the data removes systematic spatial patterning from the data"   
+* the observed spatial autocorrelation is not due to an underlying process in our model  
+* the chosen weights matrix suits the underlying interactions between the polygons
+
+Therefore the main limitation of this method is that the model variance can be misspecified because it does not meet one of the assumptions above, i.e. the chosen weights matrix needs to suit the underlying interactions between the polygons. Other limitations include that t 
+
+Using `terra` to test for spatial autocorrelation of each variable, by county in Columbus, OH. 
 
 $$
-I=\frac{n}{\sum_{i=1}^{n} (y_{i}-\overline{y})^{2}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij} (y_{i}-\overline{y}) (y_{j}-\overline{y})}{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij}}
+I=\frac{n}{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij} (y_{i}-\overline{y}) (y_{j}-\overline{y})}{\sum_{i=1}^{n} (y_{i}-\overline{y})^{2}}
 $$
 
 Moran's $I$ is a global measure of spatial autocorrelation with values ranging -1 to 1. Here we are using a neighbor's matrix for any counties that are touching each other ($w_{ij}$). $n$ is the number of neighborhoods in Columbus, OH which are indexed by $i$ and $j$ (is polygon $i$ a neighbor with $j$. $\overline{y}$ is the mean value of the variable of interest and $y_{1...n}$ is that value in each polygon.    
@@ -146,16 +153,14 @@ ww <-  adjacent(columbus, "touches", pairs=FALSE)
 Roughly the expected value for Moran's I is $E(I)=\frac{-1}{n-1}$   
 
 ```r
--1/(nrow(columbus)-1)
+(ev = -1/(nrow(columbus)-1))
 ```
 
 ```
 ## [1] -0.02083333
 ```
 
-Values significantly ($\alpha = 0.05$) below that indicate negative spatial autocorrelation (a phenomena that generally occurs in random datasets) and above that indicates positive spatial autocorrelation (neighbors are more similar to each other than non-neighbors). 
-
-*** I'm seeing the formula written in 2 ways above, and with denominator's flipped  
+Values significantly ($\alpha = 0.05$) below the expected value indicate negative spatial autocorrelation (a phenomena that generally occurs in random datasets) and above that indicates positive spatial autocorrelation (neighbors are more similar to each other than non-neighbors). The null hypothesis here is that the values are distributed following a random process (I <= -0.0208333), and the alternative hypothesis is that the values are distributed with positive spatial autocorrelation (I > -0.0208333). The p-value is calculated using a Monte Carlo simulation, from which we derive a density plot of the I values from each permutation and calculate the number of times our simulated I value is greater than or equal to the observed value out of all the trials. A monte carlo simulation is the best method for this because it is robust to irregularly shaped polygons.  
 
 #### House value  
 
@@ -169,11 +174,11 @@ Values significantly ($\alpha = 0.05$) below that indicate negative spatial auto
 ```
 
 ```r
-## Monte Carlo sim to test for significance (I'm following https://rspatial.org/terra/analysis/3-spauto.html#compute-morans-i) which seems a bit sus
+## Monte Carlo sim to test for significance 
 m <- sapply(1:99, function(i) {
     autocor(sample(columbus$HOVAL), ww, "moran")
 })
-hist(m) #distribution of values of I using subsets of dataset
+plot(density(m), main = NA); abline(v=ac, col = "red", lwd = 2) #distribution of values of I using subsets of dataset
 ```
 
 <img src="midterm-project_files/figure-html/unnamed-chunk-9-1.png" width="50%" />
@@ -184,7 +189,7 @@ sum(m >= ac) / 100 # number of times I of subset is >= to I of entire dataset / 
 ```
 
 ```
-## [1] 0.01
+## [1] 0
 ```
 
 So there is significant (Moran's I = 0.2213441, p < 0.05) spatial autocorrelation in house value, meaning the average value of houses in neighboring neighborhoods are different from the average value of all neighborhoods.
@@ -266,7 +271,7 @@ sum(m >= ac) / 100
 ```
 
 ```
-## [1] 0.53
+## [1] 0.5
 ```
 
 
@@ -300,15 +305,16 @@ sum(m >= ac) / 100
 
 There is significant spatial autocorrelation with plumbing (Moran's I = 0.4550575, p < 0.05).
 
-### Geary's C
+### Geary's C  
 
-$N$ is the number of spatial units indexed by i and j; x is the variable of interest; $\bar{x}$ is the mean of $x$; $w_{ij}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., $w_{ii}=0$); and $W$ is the sum of all $w_{ij}$.
+Geary's $C$ is a measure of local spatial autocorrelation that is roughly inversely related to Moran's I. The values ranging 0 to > 1, with values 0-1 representing positive spatial autocorrelation and values > 1 representing negative spatial autocorrelation. 
+
+The neighbor's matrix ($w_{ij}$) is the same what was used for Moran's I. $N$ is the number of spatial units indexed by i and j; x is the variable of interest; $\bar{x}$ is the mean of $x$; $w_{ij}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., $w_{ii}=0$); and $W$ is the sum of all $w_{ij}$.  $\sum_{i \neq j} w_{i j}$ is the sum of that weight matrix with the diagonal equal to 0.  
 $$
 C=\frac{(n-1) \sum_{i} \sum_{j} w_{i j}\left(y_{i}-y_{j}\right)^{2}}{2\left(\sum_{i \neq j} w_{i j}\right) \sum_{i}\left(y_{i}-\bar{y}\right)^{2}}
 $$
 
-Geary's $C$ is a measure of local spatial autocorrelation that is roughly inversely related to Moran's I.  
-The values ranging 0 to > 1, with values 0-1 representing positive spatial autocorrelation and values > 1 representing negative spatial autocorrelation. The neighbor's matrix ($w_{ij}$) is the same what was used for Moran's I. $\sum_{i \neq j} w_{i j}$ is the sum of that weight matrix with the diagonal equal to 0.  
+The null hypothesis here is that the values are distributed following a random process or have negative spatial autocorrelation (C >= 1), and the alternative hypothesis is that the values are distributed with positive spatial autocorrelation (C < 1). The p-value is calculated using a Monte Carlo simulation, from which we derive a density plot of the C values from each permutation and calculate the number of times our simulated C value is greater than or equal to the observed value out of all the trials. A monte carlo simulation is the best method for this because it is robust to irregularly shaped polygons.  
 
 #### House Value
 
@@ -325,18 +331,18 @@ The values ranging 0 to > 1, with values 0-1 representing positive spatial autoc
 m <- sapply(1:99, function(i) {
     autocor(sample(columbus$HOVAL), ww, "geary")
 })
-hist(m)
+plot(density(m), main = NA); abline(v=gearyc, col = "red", lwd = 2)
 ```
 
 <img src="midterm-project_files/figure-html/unnamed-chunk-19-1.png" width="50%" />
 
 ```r
 ## p-value
-sum(m >= gearyc) / 100
+sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.94
+## [1] 0.04
 ```
 
 No significant spatial autocorrelation (geary's c = 0.7889937, p > 0.05).  
@@ -358,14 +364,14 @@ m <- sapply(1:99, function(i) {
 })
 
 ## p-value
-sum(m >= gearyc) / 100
+sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.97
+## [1] 0.01
 ```
 
-No significant spatial autocorrelation (geary's c = 0.7137603, p > 0.05).  
+Significant spatial autocorrelation (geary's c = 0.7137603, p < 0.05).  
 
 #### Crime  
 
@@ -384,14 +390,14 @@ m <- sapply(1:99, function(i) {
 })
 
 ## p-value
-sum(m >= gearyc) / 100
+sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.99
+## [1] 0
 ```
 
-No significant spatial autocorrelation (geary's c = 0.5916113, p > 0.05).  
+Significant spatial autocorrelation (geary's c = 0.5916113, p < 0.05).  
 
 #### Open space  
 
@@ -410,11 +416,11 @@ m <- sapply(1:99, function(i) {
 })
 
 ## p-value
-sum(m >= gearyc) / 100
+sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.72
+## [1] 0.4
 ```
 
 No significant spatial autocorrelation (geary's c = 0.878182, p > 0.05).  
@@ -436,14 +442,14 @@ m <- sapply(1:99, function(i) {
 })
 
 ## p-value
-sum(m >= gearyc) / 100
+sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.93
+## [1] 0.06
 ```
 
-No significant spatial autocorrelation (geary's c = 0.6806864, p > 0.05).  
+Significant spatial autocorrelation (geary's c = 0.6806864, p < 0.05).  
 
 ### Compare Moran's I and Geary's C  
 Reinhard Furrer [@Furrer] suggests to take 1-C to compare it to Moran's I more easily.  
@@ -454,19 +460,21 @@ Reinhard Furrer [@Furrer] suggests to take 1-C to compare it to Moran's I more e
 \hline
 House value & 0.221 & * & 0.789 & 0.211 & \\
 \hline
-Income & 0.412 & * & 0.714 & 0.286 & \\
+Income & 0.412 & * & 0.714 & 0.286 & *\\
 \hline
-Crime & 0.515 & * & 0.592 & 0.408 & \\
+Crime & 0.515 & * & 0.592 & 0.408 & *\\
 \hline
 Open space & -0.037 &  & 0.878 & 0.122 & \\
 \hline
-Plumbing & 0.455 & * & 0.681 & 0.319 & \\
+Plumbing & 0.455 & * & 0.681 & 0.319 & *\\
 \hline
 \end{tabular}
 
-There are differences observed in spatial autocorrelation in the data calculated with Moran's I and Geary's C. For both Moran's I and Geary's C there was not significant spatial autocorrelation in Open space. There was significant positive spatial autocorrelation in house value, household income, crime, and plumbing using Moran's I, but no significant  spatial autocorrelation using Geary's C. However the trends are the same (both find weak to moderate positive spatial correlation)  
+There are differences observed in spatial autocorrelation in the data calculated with Moran's I and Geary's C. For both Moran's I and Geary's C there was not significant spatial autocorrelation in Open space. There was significant positive spatial autocorrelation in household income, crime, and plumbing using Moran's I and Geary's C. Housing value only had positive spatial autocorrelation using Moran's I. However the trends are the same (both find weak to moderate positive spatial correlation)  
 
 # Spatial regression models
+
+
 
 ## Constant means
 
@@ -481,7 +489,9 @@ $$
 \hat{Y_i} = \bar{Y} = \frac{1}{n}\sum_{i=1}^{n}Y_i
 $$
 
-We estimate the model using `lm` function:
+Where $\hat{Y}_i$ is the estimated value of a home in 1000s of dollars.
+
+We estimate the model using `lm` function (using the ```mean()``` function yields the same result):
 
 
 ```r
@@ -540,13 +550,13 @@ We find that the model estimates `log(HOVAL)` to be 3.55231, which is $\$$ 3.489
 
 ## Linear Model with Independent Residuals
 
-Improving over the zero means model, we model the home value `HOVAL` as a linear function of its (non-spatial) covariates with i.i.d. errors.
+Clearly, the zero means model is rather simplistic. To improve, we model the home value `HOVAL` as a linear function of its (non-spatial) covariates with i.i.d. errors.
 
 $$
 \mathbf{Y} = \mathbf{X}\mathbf{\beta} + \mathbf{\varepsilon}
 $$
 
-where X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
+where Y is a vector of home values in 1000s of dollars, X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
 
 We estimate the model with
 
@@ -585,11 +595,11 @@ par(mfrow=c(2,2))
 plot(col.lm, main = "Diagnostic Plots for Linear Model")
 ```
 
-![](midterm-project_files/figure-html/unnamed-chunk-33-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-34-1.png)<!-- -->
 
 The diagnostic plots suggests that the assumptions of regression are not satisfied, which is to be expected since we know that most areal data is spatially dependent.
 
-## Simultaneous Autoregressive Models  
+## Simultaneous Autoregressive Models (SAR)
 
 ### SAR error model
 
@@ -601,7 +611,7 @@ To derive the model, we formulate the error as a first-order spatial autoregress
 \varepsilon=\lambda W \varepsilon+u
 \end{equation}
 
-where $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i}$ a random error term, assumed to be i.i.d. If $|\lambda|<1$ and solving for $\varepsilon$ yields
+where $\varepsilon$ is the error term of a standard regression model, $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i}$ a random error term, assumed to be i.i.d. If $|\lambda|<1$ (to avoid the process exploding) and solving for $\varepsilon$ yields
 
 \begin{equation}
 \varepsilon=(I-\lambda W)^{-1} u
@@ -610,10 +620,10 @@ where $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spa
 We obtain the spatial error model by inserting $\varepsilon$ into the standard regression model
 
 \begin{equation}
-y=X \beta+(I-\lambda W)^{-1} u
+Y=X \beta+(I-\lambda W)^{-1} u
 \end{equation}
 
-where X is a matrix of the covariates `INC`, `CRIME`, `OPEN`, and `CP`. with $E\left[u u^{\prime}\right]=\sigma^{2} I$, which results in the following error variance-covariance matrix
+where Y is a vector of home values in 1000s of dollars, X is a matrix of the covariates `INC`, `CRIME`, `OPEN`, and `CP`. with constant variance $E\left[u u^{\prime}\right]=\sigma^{2} I$, which results in the following error variance-covariance matrix
 
 \begin{equation}
 E\left[\varepsilon \varepsilon^{\prime}\right]=\sigma^{2}(I-\lambda W)^{-1}\left(I-\lambda W^{\prime}\right)^{-1}
@@ -637,7 +647,7 @@ col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
 hist(residuals(col.errW.eig), main = "Histogram of Residuals of Error SAR Model", xlab = "Residuals of Error SAR Model")
 ```
 
-![](midterm-project_files/figure-html/unnamed-chunk-34-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
 
 The residuals are not normally distributed. We therefore, log-transform the response to normalize them.
 
@@ -650,7 +660,7 @@ col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
 hist(residuals(col.errW.eig.log), main = "Histogram of Residuals of Error SAR Model (Logged Response)", xlab = "Residuals of Error SAR Model (Logged Response)")
 ```
 
-![](midterm-project_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-36-1.png)<!-- -->
 
 ```r
 # print model summary
@@ -723,309 +733,6 @@ moran.test(residuals(col.errW.eig.log), lw) # not significant
 
 With a p-value of 0.3559, we fail to reject $H_0$. There does not seem to be any spatial dependence present in the residuals of our error model.
 
-### SAR lag and Durbin models
-
-Next, we compute the SAR lag and SAR Durbin models on the log-transformed housing value
-with the same covariates used for the SAR error model.
-
-The SAR lag model assumes the form
-$$
-y = \rho W y + X\beta + \varepsilon,
-$$
-where $W$ is the spatial neighbor matrix and $\rho$ is a real parameter that controls the interaction strength between the data. Like the SAR error model, the SAR lag model is a global spatial model since it is autoregressive. In the lag model, the autoregressive structure comes from the data $y$ rather than from the residuals. We histogram the SAR lag residuals below:
-
-
-```r
-# estimate SAR lag model without transformation
-lag <- lagsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
- lw, Durbin=FALSE)
-
-# look at the residuals
-hist(residuals(lag))
-```
-
-![](midterm-project_files/figure-html/unnamed-chunk-37-1.png)<!-- -->
-
-```r
-# print model summary
-summary(lag, correlation=TRUE)
-```
-
-```
-## 
-## Call:lagsarlm(formula = HOVAL ~ INC + CRIME + OPEN + CP, data = columbus.sf, 
-##     listw = lw, Durbin = FALSE)
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -19.6173  -8.1469  -3.9561   3.5458  54.2483 
-## 
-## Type: lag 
-## Coefficients: (asymptotic standard errors) 
-##             Estimate Std. Error z value Pr(>|z|)
-## (Intercept) 40.70225   14.07220  2.8924 0.003823
-## INC          0.37919    0.50948  0.7443 0.456708
-## CRIME       -0.37579    0.21022 -1.7876 0.073840
-## OPEN         0.86299    0.44792  1.9267 0.054021
-## CP          -5.47227    6.38795 -0.8567 0.391636
-## 
-## Rho: 0.15013, LR test value: 0.72551, p-value: 0.39434
-## Asymptotic standard error: 0.16869
-##     z-value: 0.88999, p-value: 0.37347
-## Wald statistic: 0.79209, p-value: 0.37347
-## 
-## Log likelihood: -198.9841 for lag model
-## ML residual variance (sigma squared): 196.14, (sigma: 14.005)
-## Number of observations: 49 
-## Number of parameters estimated: 7 
-## AIC: 411.97, (AIC for lm: 410.69)
-## LM test for residual autocorrelation
-## test value: 4.1781, p-value: 0.04095
-## 
-##  Correlation of coefficients 
-##             sigma rho   (Intercept) INC   CRIME OPEN 
-## rho         -0.06                                    
-## (Intercept)  0.03 -0.50                              
-## INC          0.01 -0.12 -0.71                        
-## CRIME       -0.01  0.11 -0.69        0.44            
-## OPEN         0.00  0.01  0.01       -0.18  0.07      
-## CP          -0.01  0.21 -0.08        0.14 -0.55 -0.19
-```
-
-
-The residuals do not appear normally distributed, so we log-transform the housing variable as before.
-
-
-
-```r
-# estimate SAR lag model with log transformation
-lag.log <- lagsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
- lw, Durbin = FALSE)
-
-hist(residuals(lag.log))
-```
-
-![](midterm-project_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
-
-```r
-# print model summary
-summary(lag.log, correlation=TRUE)
-```
-
-```
-## 
-## Call:
-## lagsarlm(formula = log(HOVAL) ~ INC + CRIME + OPEN + CP, data = columbus.sf, 
-##     listw = lw, Durbin = FALSE)
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.48184 -0.20602 -0.10922  0.11278  0.89848 
-## 
-## Type: lag 
-## Coefficients: (asymptotic standard errors) 
-##               Estimate Std. Error z value  Pr(>|z|)
-## (Intercept)  2.9330477  0.6201326  4.7297 2.248e-06
-## INC          0.0109985  0.0109584  1.0037   0.31555
-## CRIME       -0.0085071  0.0045184 -1.8828   0.05973
-## OPEN         0.0218856  0.0096116  2.2770   0.02279
-## CP          -0.1482052  0.1379725 -1.0742   0.28275
-## 
-## Rho: 0.21738, LR test value: 1.6599, p-value: 0.19762
-## Asymptotic standard error: 0.15432
-##     z-value: 1.4086, p-value: 0.15895
-## Wald statistic: 1.9842, p-value: 0.15895
-## 
-## Log likelihood: -10.88657 for lag model
-## ML residual variance (sigma squared): 0.090319, (sigma: 0.30053)
-## Number of observations: 49 
-## Number of parameters estimated: 7 
-## AIC: 35.773, (AIC for lm: 35.433)
-## LM test for residual autocorrelation
-## test value: 4.6528, p-value: 0.031003
-## 
-##  Correlation of coefficients 
-##             sigma rho   (Intercept) INC   CRIME OPEN 
-## rho         -0.08                                    
-## (Intercept)  0.07 -0.91                              
-## INC          0.01 -0.14 -0.25                        
-## CRIME       -0.01  0.12 -0.42        0.43            
-## OPEN         0.00  0.00  0.00       -0.18  0.07      
-## CP          -0.02  0.24 -0.20        0.13 -0.54 -0.19
-```
-
-As with the error model, the CRIME and OPEN covariates have the lowest p-values. However for this model, only OPEN
-falls below the threshold p-value of 0.05 instead of both OPEN and CRIME in the error model. The lag p-values are higher than those in the error model for all covariates except OPEN, suggesting less spatial correlation among the data overall in the lag
-model.
-
-Next we test for spatial dependence among the residuals.
-
-
-```r
-# Run Moran's I test
-moran.test(residuals(lag.log), lw)
-```
-
-```
-## 
-## 	Moran I test under randomisation
-## 
-## data:  residuals(lag.log)  
-## weights: lw    
-## 
-## Moran I statistic standard deviate = 1.5597, p-value = 0.05942
-## alternative hypothesis: greater
-## sample estimates:
-## Moran I statistic       Expectation          Variance 
-##       0.122686854      -0.020833333       0.008467729
-```
-
-The p-value is 0.05942, so we cannot conclude that there is residual spatial dependence in the lag model. However we note that this p-value is markedly smaller than the p-value of 0.3559 in the error model.
-
-
-
-The spatial Durbin model (SDM) is a generalization of the SAR lag model and takes the form
-$$
-y = \rho Wy + WX\theta + X\beta + \varepsilon.
-$$
-
-The additional term $WX\theta$ term introduces local spatial dependence to the model, where $\theta$ is a new model parameter. Hence, SDM in principle can capture both local and global dependence among the data.
-
-We use this model on the log-transformed housing data as before:
-
-
-
-```r
-# estimate Durbin model with log transformation
-durbin.log <- lagsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
- lw, Durbin = TRUE)
-
-hist(residuals(durbin.log))
-```
-
-![](midterm-project_files/figure-html/unnamed-chunk-40-1.png)<!-- -->
-
-```r
-# print model summary
-summary(durbin.log, correlation=TRUE)
-```
-
-```
-## 
-## Call:
-## lagsarlm(formula = log(HOVAL) ~ INC + CRIME + OPEN + CP, data = columbus.sf, 
-##     listw = lw, Durbin = TRUE)
-## 
-## Residuals:
-##       Min        1Q    Median        3Q       Max 
-## -0.420011 -0.195515 -0.060449  0.087907  0.888759 
-## 
-## Type: mixed 
-## Coefficients: (asymptotic standard errors) 
-##               Estimate Std. Error z value Pr(>|z|)
-## (Intercept)  1.9491177  0.8220514  2.3710 0.017738
-## INC          0.0124874  0.0104106  1.1995 0.230339
-## CRIME       -0.0098983  0.0041739 -2.3715 0.017715
-## OPEN         0.0250355  0.0091306  2.7419 0.006108
-## CP          -0.3979069  0.1578926 -2.5201 0.011732
-## lag.INC      0.0032787  0.0192872  0.1700 0.865014
-## lag.CRIME    0.0094498  0.0092929  1.0169 0.309209
-## lag.OPEN     0.0298926  0.0249782  1.1967 0.231405
-## lag.CP       0.3121857  0.2454742  1.2718 0.203456
-## 
-## Rho: 0.36181, LR test value: 3.6519, p-value: 0.056004
-## Asymptotic standard error: 0.16861
-##     z-value: 2.1458, p-value: 0.031888
-## Wald statistic: 4.6045, p-value: 0.031888
-## 
-## Log likelihood: -6.784626 for mixed model
-## ML residual variance (sigma squared): 0.074806, (sigma: 0.27351)
-## Number of observations: 49 
-## Number of parameters estimated: 11 
-## AIC: 35.569, (AIC for lm: 37.221)
-## LM test for residual autocorrelation
-## test value: 0.023684, p-value: 0.87769
-## 
-##  Correlation of coefficients 
-##             sigma rho   (Intercept) INC   CRIME OPEN  CP    lag.INC lag.CRIME
-## rho         -0.16                                                            
-## (Intercept)  0.11 -0.72                                                      
-## INC          0.00 -0.01 -0.24                                                
-## CRIME        0.01 -0.04 -0.16        0.38                                    
-## OPEN         0.02 -0.10 -0.03       -0.16  0.08                              
-## CP           0.00 -0.03  0.13        0.17 -0.40 -0.19                        
-## lag.INC      0.02 -0.15 -0.44       -0.12  0.01  0.11 -0.14                  
-## lag.CRIME   -0.02  0.13 -0.65        0.13 -0.09  0.15 -0.05  0.60            
-## lag.OPEN     0.03 -0.20 -0.01       -0.02  0.08  0.26 -0.12  0.01    0.20    
-## lag.CP      -0.02  0.15  0.03       -0.19 -0.01 -0.09 -0.49  0.00   -0.48    
-##             lag.OPEN
-## rho                 
-## (Intercept)         
-## INC                 
-## CRIME               
-## OPEN                
-## CP                  
-## lag.INC             
-## lag.CRIME           
-## lag.OPEN            
-## lag.CP      -0.16
-```
-In this model, the covariates CP,CRIME and now also OPEN have significant p-values, and overall the p-values are lower in this model than the other SAR models considered. Since the Durbin model is the only SAR model we've considered that includes local spatial dependence of the data, it is possible that the local dependence is more significant, or at least that both local and global effects are necessary to describe the spatial dependence of the data.
-
-A final remark on SAR models: we can further generalize the Durbin model to include autoregressive residuals as seen in the error model. The resulting model generalizes each of the 3 SAR models we have analyzed and assumes the form
-
-$$
-y = \rho Wy + WX\theta + X\beta + (I - \lambda W)^{-1}u.
-$$
-
-
-### Likelihood Ratio
-
-Since the SAR error and SAR lag models are special cases of the SAR Durbin model, we compare the performance of these models via likelihood ratio tests. These tests take the form
-$$
-\lambda_{\mathrm{LR}}=-2 \ln \left[\frac{\sup _{\theta \in \Theta_{0}} \mathcal{L}(\theta)}{\sup _{\theta \in \Theta} \mathcal{L}(\theta)}\right],
-$$
-
-where $\Theta_0$ denotes the restricted parameter space of the restricted model (in our case, error or lag models) and $\Theta$ denotes the full parameter space of the general model (in our case, the Durbin model).
-
-We compare the error SAR, SAR lag and SAR Durbin models on the log(HOVAL) data with identical covariates INC, CRIME, OPEN and CP using likelihood ratios below:
-
-
-```r
-library(lmtest)
-
-lrtest(col.errW.eig.log,durbin.log) # error vs. Durbin
-```
-
-```
-## Likelihood ratio test
-## 
-## Model 1: log(HOVAL) ~ INC + CRIME + OPEN + CP
-## Model 2: log(HOVAL) ~ INC + CRIME + OPEN + CP
-##   #Df  LogLik Df  Chisq Pr(>Chisq)
-## 1   7 -9.0624                     
-## 2  11 -6.7846  4 4.5556      0.336
-```
-
-```r
-lrtest(lag.log, durbin.log)         # lag vs. Durbin
-```
-
-```
-## Likelihood ratio test
-## 
-## Model 1: log(HOVAL) ~ INC + CRIME + OPEN + CP
-## Model 2: log(HOVAL) ~ INC + CRIME + OPEN + CP
-##   #Df   LogLik Df  Chisq Pr(>Chisq)  
-## 1   7 -10.8866                       
-## 2  11  -6.7846  4 8.2039    0.08439 .
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-```
-The first value of 0.336 is very large, so we cannot reject the null-hypothesis that the error model fits the data.
-The second value of 0.08439 is lower but still above 0.05, so again we cannot reject the hypothesis that the lag model fits the data. This seems to imply that the class of SAR error model outperforms the SAR lag model on our data.
-
-
 ## Conditional Autoregressive Models
 
 In the next step, we implement the conditional autoregressive (CAR) model on the Columbus data to study the impact of covariates on House values in Columbus, OH, 1980 with spatial information. 
@@ -1059,7 +766,7 @@ $$
 $$
 
 
-![](midterm-project_files/figure-html/unnamed-chunk-42-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
 
 
 
@@ -1101,7 +808,7 @@ set.seed(2021)
 
 
 
-![](midterm-project_files/figure-html/unnamed-chunk-45-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-41-1.png)<!-- -->
 
 The log likelihood of this model is 17.97  while the training root mean square error (RMSE) is 52.6. From the table of $95\%$ confidence intervals for coefficients, we have
 
@@ -1112,12 +819,12 @@ The log likelihood of this model is 17.97  while the training root mean square e
 * Hold other predictors fixed, regions with **closer distance to CBD** tend to have higher *House values*.
 * Hold other predictors fixed, **core** regions tend to have higher *House values*.
 
-![](midterm-project_files/figure-html/unnamed-chunk-46-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-42-1.png)<!-- -->
 
 
 ```r
 # Moran I
-Moran.I(residuals(car_model_gaussian), ww)$p.value
+Moran.I(car_model_gaussian$residuals[,1], ww)$p.value
 ```
 
 ```
@@ -1216,7 +923,7 @@ citation("terra")
 ## To cite package 'terra' in publications use:
 ## 
 ##   Robert J. Hijmans (2021). terra: Spatial Data Analysis. R package
-##   version 1.4-7. https://CRAN.R-project.org/package=terra
+##   version 1.4-11. https://CRAN.R-project.org/package=terra
 ## 
 ## A BibTeX entry for LaTeX users is
 ## 
@@ -1224,7 +931,7 @@ citation("terra")
 ##     title = {terra: Spatial Data Analysis},
 ##     author = {Robert J. Hijmans},
 ##     year = {2021},
-##     note = {R package version 1.4-7},
+##     note = {R package version 1.4-11},
 ##     url = {https://CRAN.R-project.org/package=terra},
 ##   }
 ```
@@ -1288,7 +995,7 @@ citation("GGally")
 ## 
 ##   Barret Schloerke, Di Cook, Joseph Larmarange, Francois Briatte,
 ##   Moritz Marbach, Edwin Thoen, Amos Elberg and Jason Crowley (2021).
-##   GGally: Extension to 'ggplot2'. R package version 2.1.1.
+##   GGally: Extension to 'ggplot2'. R package version 2.1.2.
 ##   https://CRAN.R-project.org/package=GGally
 ## 
 ## A BibTeX entry for LaTeX users is
@@ -1297,7 +1004,7 @@ citation("GGally")
 ##     title = {GGally: Extension to 'ggplot2'},
 ##     author = {Barret Schloerke and Di Cook and Joseph Larmarange and Francois Briatte and Moritz Marbach and Edwin Thoen and Amos Elberg and Jason Crowley},
 ##     year = {2021},
-##     note = {R package version 2.1.1},
+##     note = {R package version 2.1.2},
 ##     url = {https://CRAN.R-project.org/package=GGally},
 ##   }
 ```
