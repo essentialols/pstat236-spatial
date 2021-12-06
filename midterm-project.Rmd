@@ -175,6 +175,7 @@ hist(log10(df.columbus$HOVAL),
 There are a many options when making the adjacency matrix as outlined above, but for our purposes we are saying that any counties touching each other are neighbors (1s) and any that aren't are not (0s). This is the neighbor schema shown in the queen/touches plot above.    
 
 Figure out what the neighbors are, we must decide a few rule. Here we are considering all counties $i=1\dots49$ and $j=1\dots49$ that touch each other to be neighbors and that the relationship is symmetrical (i.e. $w_{ij}$ = $w_{ji}$)   
+
 ```{r}
 xy <- centroids(columbus)
 neighbors <- adjacent(columbus, type = "touches", symmetrical=TRUE)
@@ -450,7 +451,9 @@ $$
 \hat{Y_i} = \bar{Y} = \frac{1}{n}\sum_{i=1}^{n}Y_i
 $$
 
-We estimate the model using `lm` function:
+Where $\hat{Y}_i$ is the estimated value of a home in 1000s of dollars.
+
+We estimate the model using `lm` function (using the ```mean()``` function yields the same result):
 
 ```{r}
 # make spatial vector to simple feature
@@ -471,13 +474,13 @@ We find that the model estimates `log(HOVAL)` to be 3.55231, which is $\$$ `r ro
 
 ## Linear Model with Independent Residuals
 
-Improving over the zero means model, we model the home value `HOVAL` as a linear function of its (non-spatial) covariates with i.i.d. errors.
+Clearly, the zero means model is rather simplistic. To improve, we model the home value `HOVAL` as a linear function of its (non-spatial) covariates with i.i.d. errors.
 
 $$
 \mathbf{Y} = \mathbf{X}\mathbf{\beta} + \mathbf{\varepsilon}
 $$
 
-where X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
+where Y is a vector of home values in 1000s of dollars, X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
 
 We estimate the model with
 
@@ -493,7 +496,7 @@ plot(col.lm, main = "Diagnostic Plots for Linear Model")
 
 The diagnostic plots suggests that the assumptions of regression are not satisfied, which is to be expected since we know that most areal data is spatially dependent.
 
-## Simultaneous Autoregressive Models  
+## Simultaneous Autoregressive Models (SAR)
 
 ### SAR error model
 
@@ -505,7 +508,7 @@ To derive the model, we formulate the error as a first-order spatial autoregress
 \varepsilon=\lambda W \varepsilon+u
 \end{equation}
 
-where $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i}$ a random error term, assumed to be i.i.d. If $|\lambda|<1$ and solving for $\varepsilon$ yields
+where $\varepsilon$ is the error term of a standard regression model, $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i}$ a random error term, assumed to be i.i.d. If $|\lambda|<1$ (to avoid the process exploding) and solving for $\varepsilon$ yields
 
 \begin{equation}
 \varepsilon=(I-\lambda W)^{-1} u
@@ -514,10 +517,10 @@ where $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spa
 We obtain the spatial error model by inserting $\varepsilon$ into the standard regression model
 
 \begin{equation}
-y=X \beta+(I-\lambda W)^{-1} u
+Y=X \beta+(I-\lambda W)^{-1} u
 \end{equation}
 
-where X is a matrix of the covariates `INC`, `CRIME`, `OPEN`, and `CP`. with $E\left[u u^{\prime}\right]=\sigma^{2} I$, which results in the following error variance-covariance matrix
+where Y is a vector of home values in 1000s of dollars, X is a matrix of the covariates `INC`, `CRIME`, `OPEN`, and `CP`. with constant variance $E\left[u u^{\prime}\right]=\sigma^{2} I$, which results in the following error variance-covariance matrix
 
 \begin{equation}
 E\left[\varepsilon \varepsilon^{\prime}\right]=\sigma^{2}(I-\lambda W)^{-1}\left(I-\lambda W^{\prime}\right)^{-1}
