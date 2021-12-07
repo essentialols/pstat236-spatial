@@ -9,6 +9,9 @@ output:
     toc_float: yes
     toc_depth: 3
     code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 bibliography: [packages.bib, references.bib]
 ---
 \newpage
@@ -18,9 +21,9 @@ bibliography: [packages.bib, references.bib]
 
 # Introduction to Areal Data  
 
-Areal data is spatial data which is observed or reported for spatial units which are polygons with defined boarders. Some examples are country level data, state level data, county level data, or zip code level data where the data is aggregated for the defined area. This is often the case for private information (i.e. mean income in a zip code instead of income of each individual with their address), or data the is collected at that scale (i.e. proportion of democratic voters in an electoral unit; Bivand et al., 2013).  
+Areal data is spatial data which is observed or reported for spatial units which are polygons with defined borders. Some examples are country level data, state level data, county level data, or zip code level data where the data is aggregated for the defined area. This is often the case for private information (e.g. mean income in a zip code instead of income of each individual with their address), or data the is collected at that scale (e.g. proportion of democratic voters in an electoral unit; Bivand et al., 2013).  
 
-Some of the common problems we have with areal data have to do with the selected boundary. For example, gerrymandering is a common issue with votes because changing the boundaries yields different election results. Another issue is the choice of boundaries is often not made for the specific question being asked in the model. Bivand et al., 2013 gives the example of zip codes which are a common unit for demographic data to be reported in, but were designed for postal delivery not demographic data collection. The boundaries not fitting the underlying patterns in the data can cause model misspecification, spatial autocorrelation, and make it difficult to ascertain the number of independent observations in a dataset. Therefore, it is important to check for spatial patterning due to this partitioning to see if the model indicated is appropriate (Bivand et al., 2013).  
+Some of the common problems we have with areal data have to do with the selected boundary. For example, gerrymandering is a common issue with votes because changing the boundaries yields different election results. Another issue is that the choice of boundaries is often not made for the specific question being asked in the model. Bivand et al., 2013 gives the example of zip codes which are a common unit for demographic data to be reported in, but were designed for postal delivery not demographic data collection. The boundaries not fitting the underlying patterns in the data can cause model misspecification, spatial autocorrelation, and make it difficult to ascertain the number of independent observations in a dataset. Therefore, it is important to check for spatial patterning due to this partitioning to see if the model indicated is appropriate (Bivand et al., 2013).  
 
 ## Neighbors and weights  
 
@@ -28,14 +31,12 @@ Because we do not have a continuous surface on which to calculate distance betwe
 
 <img src="midterm-project_files/figure-html/unnamed-chunk-1-1.png" width="25%" /><img src="midterm-project_files/figure-html/unnamed-chunk-1-2.png" width="25%" /><img src="midterm-project_files/figure-html/unnamed-chunk-1-3.png" width="25%" /><img src="midterm-project_files/figure-html/unnamed-chunk-1-4.png" width="25%" />
 
-Using these neighbor relationships we can create a `weights matrix` based on understanding what the expected relationships are between neighbors we can build a weight matrix. The most simple example of this is where the $w_{ij}$ = 0 if the polygons are not neighbors and $w_{ij}$ = 1 if polygons are neighbors. 
+Using these neighbor relationships we can create a `weights matrix` based on understanding what the expected relationships are between neighbors. The most simple example of this is where the $w_{ij}$ = 0 if the polygons are not neighbors and $w_{ij}$ = 1 if polygons are neighbors. 
 
 After we do our analysis we also need to check the residuals to ensure we removed the spatial patterns.  
 
-## more background on models??  
-
 # Our dataset  
-The dataset we are using is published in `spData` and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
+The dataset we are using is published in `spData` package and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
 
 ```r
 ## load dataset
@@ -50,9 +51,8 @@ The county data is:
 * $\texttt{CRIME}_i$ residential burglaries and vehicle thefts per thousand households in the neighborhood of county $i=1\dots49$
 * $\texttt{OPEN}_i$ open space in neighborhood of county $i=1\dots49$
 * $\texttt{PLUMB}_i$ percentage housing units without plumbing of county $i=1\dots49$
-* $\texttt{CP}_i$ core-periphery (an urban rural proxy) is an indicator variable $I_{CP}(i)= \begin{cases}1 & \text { if county } i \text { is in the core } \\ 0 & \text { otherwise }\end{cases}$
+* $\texttt{CP}_i$ core-periphery is an indicator variable $I_{CP}(i)= \begin{cases}1 & \text { if county } i \text { is in the core } \\ 0 & \text { otherwise }\end{cases}$
 
-Look at some summaries of those metrics: _Kayla_   
 <img src="midterm-project_files/figure-html/unnamed-chunk-3-1.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-2.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-3.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-4.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-5.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-6.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-7.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-8.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-9.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-10.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-11.png" width="50%" /><img src="midterm-project_files/figure-html/unnamed-chunk-3-12.png" width="50%" />
 
 Because we plan to use housing value as our response variable, a logarithm transformation is applied to fix the skewness of the distribution for the variable housing value.  
@@ -80,20 +80,7 @@ Figure out what the neighbors are, we must decide a few rule. Here we are consid
 xy <- terra::centroids(columbus)
 neighbors <- adjacent(columbus, type = "touches", symmetrical=TRUE)
 colnames(neighbors) <- c("i", "j")
-head(neighbors)
-```
-
-```
-##      i j
-## [1,] 1 2
-## [2,] 1 3
-## [3,] 2 3
-## [4,] 2 4
-## [5,] 3 4
-## [6,] 3 5
-```
-
-```r
+# head(neighbors)
 plot(columbus, col='lightgray', border='black', lwd=1)
 p1 <- xy[neighbors[,1], ]
 p2 <- xy[neighbors[,2], ]
@@ -103,7 +90,7 @@ lines(p1, p2, col='red', lwd=2)
 ![](midterm-project_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
 
-As described above, there are many options when making the adjacency matrix, but for our purposes we are saying that any counties touching each other are neighbors ($w_{ij}$ = 1) and any that are not touching each other are not ($w_{ij}$ = 0).  
+In the weight matrix any counties touching each other are neighbors and assigned a weight of 1 ($w_{ij}$ = 1) and any that are not touching each other are assigned a weight of 0 ($w_{ij}$ = 0).  
 
 Here is what part of the adjacency matrix looks like:    
 
@@ -128,23 +115,23 @@ From that we can understand that county$_{i=1}$ is touching counties$_{j = 2, 3}
 
 ### Moran's I  
 
+Moran's $I$ is a global measure of spatial autocorrelation with values ranging -1 to 1. Here we are using a neighbor's matrix for any counties that are touching each other ($w_{ij}$). $n$ is the number of neighborhoods in Columbus, OH which are indexed by $i$ and $j$ (is polygon $i$ a neighbor with $j$. $\overline{y}$ is the mean value of the variable of interest and $y_{1...n}$ is that value in each polygon.    
+
 The assumptions for this test are (Bivand et al., 2013):  
 
-* " the mean model of the data removes systematic spatial patterning from the data"   
-* the observed spatial autocorrelation is not due to an underlying process in our model  
+* "the mean model of the data removes systematic spatial patterning from the data"   
+* the observed spatial autocorrelation is not due to an underlying process in our model (i.e. a parameter controlled for in the model)  
 * the chosen weights matrix suits the underlying interactions between the polygons
 
-Therefore the main limitation of this method is that the model variance can be misspecified because it does not meet one of the assumptions above, i.e. the chosen weights matrix needs to suit the underlying interactions between the polygons. Other limitations include that t 
+The main limitation of this method is that the model variance can be misspecified because it does not meet one of the assumptions above, e.g. the chosen weights matrix needs to suit the underlying interactions between the polygons. 
 
-Using `terra` to test for spatial autocorrelation of each variable, by county in Columbus, OH. 
 
 $$
 I=\frac{n}{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{ij} (y_{i}-\overline{y}) (y_{j}-\overline{y})}{\sum_{i=1}^{n} (y_{i}-\overline{y})^{2}}
 $$
+Using the `terra` package to test for spatial autocorrelation of each variable, by county in Columbus, OH. 
 
-Moran's $I$ is a global measure of spatial autocorrelation with values ranging -1 to 1. Here we are using a neighbor's matrix for any counties that are touching each other ($w_{ij}$). $n$ is the number of neighborhoods in Columbus, OH which are indexed by $i$ and $j$ (is polygon $i$ a neighbor with $j$. $\overline{y}$ is the mean value of the variable of interest and $y_{1...n}$ is that value in each polygon.    
-
-The adjacency matrix for all counties that touch each other ($w_{ij}$ above, calling ww here):  
+The adjacency matrix for all counties that touch each other ($w_{ij}$ above):  
 
 ```r
 ww <-  adjacent(columbus, "touches", pairs=FALSE)
@@ -160,7 +147,7 @@ Roughly the expected value for Moran's I is $E(I)=\frac{-1}{n-1}$
 ## [1] -0.02083333
 ```
 
-Values significantly ($\alpha = 0.05$) below the expected value indicate negative spatial autocorrelation (a phenomena that generally occurs in random datasets) and above that indicates positive spatial autocorrelation (neighbors are more similar to each other than non-neighbors). The null hypothesis here is that the values are distributed following a random process (I <= -0.0208333), and the alternative hypothesis is that the values are distributed with positive spatial autocorrelation (I > -0.0208333). The p-value is calculated using a Monte Carlo simulation, from which we derive a density plot of the I values from each permutation and calculate the number of times our simulated I value is greater than or equal to the observed value out of all the trials. A monte carlo simulation is the best method for this because it is robust to irregularly shaped polygons.  
+The null hypothesis here is that the values are distributed following a random process or with negative spatial autocorrelation (I <= -0.021), and the alternative hypothesis is that the values are distributed with positive spatial autocorrelation (I > -0.021). Values significantly ($\alpha = 0.05$) below the expected value indicate negative spatial autocorrelation (a phenomena that generally occurs in random datasets) and above that indicates positive spatial autocorrelation (neighbors are more similar to each other than non-neighbors).  The p-value is calculated using a Monte Carlo simulation, from which we derive a density plot of the I values from each permutation and calculate the number of times our simulated I value is greater than or equal to the observed value out of all the trials. A monte carlo simulation is the best method for this because it is robust to irregularly shaped polygons.  
 
 #### House value  
 
@@ -271,7 +258,7 @@ sum(m >= ac) / 100
 ```
 
 ```
-## [1] 0.5
+## [1] 0.54
 ```
 
 
@@ -307,9 +294,9 @@ There is significant spatial autocorrelation with plumbing (Moran's I = 0.455057
 
 ### Geary's C  
 
-Geary's $C$ is a measure of local spatial autocorrelation that is roughly inversely related to Moran's I. The values ranging 0 to > 1, with values 0-1 representing positive spatial autocorrelation and values > 1 representing negative spatial autocorrelation. 
+Geary's $C$ is a measure of global measure of spatial autocorrelation that is more sensitive to local correlations. It is roughly inversely related to Moran's I. The values ranging 0 to greater than 1, with values 0-1 representing positive spatial autocorrelation and values > 1 representing negative spatial autocorrelation. 
 
-The neighbor's matrix ($w_{ij}$) is the same what was used for Moran's I. $N$ is the number of spatial units indexed by i and j; x is the variable of interest; $\bar{x}$ is the mean of $x$; $w_{ij}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., $w_{ii}=0$); and $W$ is the sum of all $w_{ij}$.  $\sum_{i \neq j} w_{i j}$ is the sum of that weight matrix with the diagonal equal to 0.  
+The neighbor's matrix ($w_{ij}$) is the same what was used for Moran's I. $N$ is the number of spatial units indexed by i and j; $y$ is the variable of interest; $\bar{y}$ is the mean of $y$; $w_{ij}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., $w_{ii}=0$); and $W$ is the sum of all $w_{ij}$.  $\sum_{i \neq j} w_{i j}$ is the sum of that weight matrix with the diagonal equal to 0.  
 $$
 C=\frac{(n-1) \sum_{i} \sum_{j} w_{i j}\left(y_{i}-y_{j}\right)^{2}}{2\left(\sum_{i \neq j} w_{i j}\right) \sum_{i}\left(y_{i}-\bar{y}\right)^{2}}
 $$
@@ -342,7 +329,7 @@ sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.04
+## [1] 0.09
 ```
 
 No significant spatial autocorrelation (geary's c = 0.7889937, p > 0.05).  
@@ -420,7 +407,7 @@ sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.4
+## [1] 0.22
 ```
 
 No significant spatial autocorrelation (geary's c = 0.878182, p > 0.05).  
@@ -446,7 +433,7 @@ sum(m <= gearyc) / 100
 ```
 
 ```
-## [1] 0.06
+## [1] 0.07
 ```
 
 Significant spatial autocorrelation (geary's c = 0.6806864, p < 0.05).  
@@ -454,31 +441,37 @@ Significant spatial autocorrelation (geary's c = 0.6806864, p < 0.05).
 ### Compare Moran's I and Geary's C  
 Reinhard Furrer [@Furrer] suggests to take 1-C to compare it to Moran's I more easily.  
 
-\begin{tabular}{l|r|l|r|r|l}
-\hline
-  & Morans\_I & signif & Gearys\_C & One\_minus\_Gearys\_C & signif.1\\
-\hline
-House value & 0.221 & * & 0.789 & 0.211 & \\
-\hline
-Income & 0.412 & * & 0.714 & 0.286 & *\\
-\hline
-Crime & 0.515 & * & 0.592 & 0.408 & *\\
-\hline
-Open space & -0.037 &  & 0.878 & 0.122 & \\
-\hline
-Plumbing & 0.455 & * & 0.681 & 0.319 & *\\
-\hline
-\end{tabular}
+```r
+m <- data.frame(Morans_I = mi,
+                signif = mi.p,
+                Gearys_C = gc,
+                One_minus_Gearys_C = 1-gc,
+                signif = gc.p,
+                row.names = c("House value", "Income", "Crime", "Open space", "Plumbing"))
+# m
+knitr::kable(m, digits = 3)
+```
+
+
+
+|            | Morans_I|signif | Gearys_C| One_minus_Gearys_C|signif.1 |
+|:-----------|--------:|:------|--------:|------------------:|:--------|
+|House value |    0.221|*      |    0.789|              0.211|         |
+|Income      |    0.412|*      |    0.714|              0.286|*        |
+|Crime       |    0.515|*      |    0.592|              0.408|*        |
+|Open space  |   -0.037|       |    0.878|              0.122|         |
+|Plumbing    |    0.455|*      |    0.681|              0.319|*        |
 
 There are differences observed in spatial autocorrelation in the data calculated with Moran's I and Geary's C. For both Moran's I and Geary's C there was not significant spatial autocorrelation in Open space. There was significant positive spatial autocorrelation in household income, crime, and plumbing using Moran's I and Geary's C. Housing value only had positive spatial autocorrelation using Moran's I. However the trends are the same (both find weak to moderate positive spatial correlation)  
 
 # Spatial regression models
 
 
+To build our intuition, we model our response variable `HOVAL` (home value in 1000s of dollars) starting with a simple means model and expanding on it with a regression model with uncorrelated errors. After that we address the shortcomings of these simplistic models by incorporating the spatial nature of the association between the variables.
 
 ## Constant means
 
-We decide to model the `HOVAL` (home value) variable for all of our models. The simplest, yet naive, model is the constant means model, which is essentially an intercept-only model, i.e. the average of the `HOVAL` variable.
+The simplest, yet naive, model is the constant means model, which is essentially an intercept-only model, i.e. the average of the `HOVAL` variable.
 
 $$
 Y_i=\mu+\varepsilon_i
@@ -519,7 +512,7 @@ summary(zero.means)
 ## Residual standard error: 18.47 on 48 degrees of freedom
 ```
 
-We find the average home value is \$38436. Since we will use the log-transformed home value for subsequent models, we repeat the zero means model for the transformed variable for purposes of comparison.
+We find the average home value is \$38436. Since we will use the log-transformed home value for subsequent models, we repeat the constant means model for the transformed variable for purposes of comparison.
 
 
 ```r
@@ -546,7 +539,35 @@ summary(zero.means.log)
 ## Residual standard error: 0.4324 on 48 degrees of freedom
 ```
 
-We find that the model estimates `log(HOVAL)` to be 3.55231, which is $\$$ 3.4894\times 10^{4} after exponentiating.
+We find that the model estimates `log(HOVAL)` to be 3.55231, which is \$ 3.4894\times 10^{4} after exponentiating.
+
+We are interested if the residuals of the constant means model are spatially dependent, so we conduct a Moran's I test with $H_0$: There is no spatial autocorrelation vs $H_1$: There is spatial correlation. We reject $H_0$ if the p-value $< \alpha = 0.05$.
+
+
+```r
+# make simple feature to neighborhood
+columbus.nb <- poly2nb(columbus.sf)
+
+# make neighborhood to list of weights
+lw <- nb2listw(columbus.nb, style="W")
+
+# Run Moran's I test for zero.means.log
+moran.mc(residuals(zero.means.log), lw, nsim=499) # significant
+```
+
+```
+## 
+## 	Monte-Carlo simulation of Moran I
+## 
+## data:  residuals(zero.means.log) 
+## weights: lw  
+## number of simulations + 1: 500 
+## 
+## statistic = 0.25278, observed rank = 498, p-value = 0.004
+## alternative hypothesis: greater
+```
+
+Since the p-value is 0.008, we reject $H_0$. We conclude that there is spatial autocorrelation in the residuals of our model.
 
 ## Linear Model with Independent Residuals
 
@@ -556,9 +577,9 @@ $$
 \mathbf{Y} = \mathbf{X}\mathbf{\beta} + \mathbf{\varepsilon}
 $$
 
-where Y is a vector of home values in 1000s of dollars, X is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
+where $\mathbf{Y}$ is a vector of home values in 1000s of dollars, $\mathbf{X}$ is a matrix of the predictors `INC` (income), `CRIME`, `OPEN` (open space in neighborhood), and `CP` (whether the neighborhood is in the center or periphery). $\beta$ is a vector of coefficients and $\varepsilon$ is a vector of random, normally distributed errors.
 
-We estimate the model with
+We estimate the model using the `lm` funtion:
 
 
 ```r
@@ -595,72 +616,90 @@ par(mfrow=c(2,2))
 plot(col.lm, main = "Diagnostic Plots for Linear Model")
 ```
 
-![](midterm-project_files/figure-html/unnamed-chunk-34-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
 
-The diagnostic plots suggests that the assumptions of regression are not satisfied, which is to be expected since we know that most areal data is spatially dependent.
+The diagnostic plots suggests that the assumptions of regression are satisfied. Yet, there might be an underlying spatial autocorrelation in the residuals. Thus, we conduct a Moran's I test.
 
-## Simultaneous Autoregressive Models (SAR)
+$H_0$: There is no spatial autocorrelation vs $H_1$: There is spatial correlation. We reject $H_0$ if the p-value $< \alpha = 0.05$.
 
-### SAR error model
+
+```r
+# Run Moran's I test for col.lm
+moran.mc(residuals(col.lm), lw, nsim=499) # significant
+```
+
+```
+## 
+## 	Monte-Carlo simulation of Moran I
+## 
+## data:  residuals(col.lm) 
+## weights: lw  
+## number of simulations + 1: 500 
+## 
+## statistic = 0.16756, observed rank = 479, p-value = 0.042
+## alternative hypothesis: greater
+```
+
+Since the p-value is 0.03194, we reject $H_0$. We conclude that there is spatial autocorrelation in the residuals of our model.
+
+## Simultaneous Autoregressive (SAR) Error Model
 
 To address the shortcomings of the linear model under the assumption of i.i.d. errors, we introduce __Simultaneous Autoregressive Models__. The models solve simultaneously for the regression coefficients and for the autoregressive error structure. In the __Spatial Error Model__, spatial autocorrelation enters in the specification only through the error terms.
 
-To derive the model, we formulate the error as a first-order spatial autoregressive process
 
-\begin{equation}
-\varepsilon=\lambda W \varepsilon+u
-\end{equation}
 
-where $\varepsilon$ is the error term of a standard regression model, $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i}$ a random error term, assumed to be i.i.d. If $|\lambda|<1$ (to avoid the process exploding) and solving for $\varepsilon$ yields
+$$
+\begin{aligned}
+Y&=X beta+\varepsilon \\
+\text{where} \quad \varepsilon&=\lambda W \varepsilon+u \\
+\varepsilon&=(I-\lambda W)^{-1} u\\
+\therefore	 \quad Y&=X \beta+(I-\lambda W)^{-1} u \\
+\end{aligned}
+$$
 
-\begin{equation}
-\varepsilon=(I-\lambda W)^{-1} u
-\end{equation}
+where $\mathbf{Y}$ is a vector of home values in 1000s of dollars, $\mathbf{X}$ is a matrix of the covariates `INC`, `CRIME`, `OPEN`, and `CP`. with constant variance $E\left[u u^{\prime}\right]=\sigma^{2} I$. $\varepsilon$ is the error term of a standard regression model, $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i} \stackrel{i.i.d.}{\sim} N(0,\sigma^2)$ a random error term. $I$ is the identity matrix.
 
-We obtain the spatial error model by inserting $\varepsilon$ into the standard regression model
+In linear form the model is:
+$$
+\begin{aligned}
+Y_k&=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\varepsilon_{k}
+\end{aligned}
+$$
 
-\begin{equation}
-Y=X \beta+(I-\lambda W)^{-1} u
-\end{equation}
+The error variance-covariance matrix is given by
 
-where Y is a vector of home values in 1000s of dollars, X is a matrix of the covariates `INC`, `CRIME`, `OPEN`, and `CP`. with constant variance $E\left[u u^{\prime}\right]=\sigma^{2} I$, which results in the following error variance-covariance matrix
-
+$$
 \begin{equation}
 E\left[\varepsilon \varepsilon^{\prime}\right]=\sigma^{2}(I-\lambda W)^{-1}\left(I-\lambda W^{\prime}\right)^{-1}
 \end{equation}
+$$
 
 In order to estimate this model, we first create a list of spatial weights for neighbors. Then we estimate the model using the `errorsarlm` function from the `spatialreg` package.
 
 
 ```r
-# make simple feature to neighborhood
-columbus.nb <- poly2nb(columbus.sf)
-
-# make neighborhood to list of weights
-lw <- nb2listw(columbus.nb, style="W")
-
 # estimate error SAR model without transformation
-col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+CP, data=columbus.sf,
+col.errW.eig <- errorsarlm(HOVAL~INC+CRIME+OPEN+as.factor(CP), data=columbus.sf,
  lw, method="eigen", quiet=T)
 
 # look at the residuals
 hist(residuals(col.errW.eig), main = "Histogram of Residuals of Error SAR Model", xlab = "Residuals of Error SAR Model")
 ```
 
-![](midterm-project_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-37-1.png)<!-- -->
 
 The residuals are not normally distributed. We therefore, log-transform the response to normalize them.
 
 
 ```r
 # estimate error SAR model with log transformation
-col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+CP, data=columbus.sf,
+col.errW.eig.log <- errorsarlm(log(HOVAL)~INC+CRIME+OPEN+as.factor(CP), data=columbus.sf,
  lw, method="eigen", quiet=T)
 
 hist(residuals(col.errW.eig.log), main = "Histogram of Residuals of Error SAR Model (Logged Response)", xlab = "Residuals of Error SAR Model (Logged Response)")
 ```
 
-![](midterm-project_files/figure-html/unnamed-chunk-36-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
 
 ```r
 # print model summary
@@ -669,9 +708,8 @@ summary(col.errW.eig.log, correlation=TRUE)
 
 ```
 ## 
-## Call:
-## errorsarlm(formula = log(HOVAL) ~ INC + CRIME + OPEN + CP, data = columbus.sf, 
-##     listw = lw, method = "eigen", quiet = T)
+## Call:errorsarlm(formula = log(HOVAL) ~ INC + CRIME + OPEN + as.factor(CP), 
+##     data = columbus.sf, listw = lw, method = "eigen", quiet = T)
 ## 
 ## Residuals:
 ##       Min        1Q    Median        3Q       Max 
@@ -679,12 +717,12 @@ summary(col.errW.eig.log, correlation=TRUE)
 ## 
 ## Type: error 
 ## Coefficients: (asymptotic standard errors) 
-##               Estimate Std. Error z value Pr(>|z|)
-## (Intercept)  3.7832959  0.2525868 14.9782  < 2e-16
-## INC          0.0134509  0.0104770  1.2839  0.19919
-## CRIME       -0.0099247  0.0042443 -2.3383  0.01937
-## OPEN         0.0194551  0.0086313  2.2540  0.02420
-## CP          -0.2520210  0.1435112 -1.7561  0.07907
+##                  Estimate Std. Error z value Pr(>|z|)
+## (Intercept)     3.7832959  0.2525868 14.9782  < 2e-16
+## INC             0.0134509  0.0104770  1.2839  0.19919
+## CRIME          -0.0099247  0.0042443 -2.3383  0.01937
+## OPEN            0.0194551  0.0086313  2.2540  0.02420
+## as.factor(CP)1 -0.2520210  0.1435112 -1.7561  0.07907
 ## 
 ## Lambda: 0.45625, LR test value: 5.3082, p-value: 0.021226
 ## Asymptotic standard error: 0.15476
@@ -698,40 +736,63 @@ summary(col.errW.eig.log, correlation=TRUE)
 ## AIC: 32.125, (AIC for lm: 35.433)
 ## 
 ##  Correlation of coefficients 
-##             sigma lambda (Intercept) INC   CRIME OPEN 
-## lambda      -0.20                                     
-## (Intercept)  0.00  0.00                               
-## INC          0.00  0.00  -0.85                        
-## CRIME        0.00  0.00  -0.67        0.38            
-## OPEN         0.00  0.00   0.04       -0.18  0.03      
-## CP           0.00  0.00  -0.09        0.20 -0.50 -0.17
+##                sigma lambda (Intercept) INC   CRIME OPEN 
+## lambda         -0.20                                     
+## (Intercept)     0.00  0.00                               
+## INC             0.00  0.00  -0.85                        
+## CRIME           0.00  0.00  -0.67        0.38            
+## OPEN            0.00  0.00   0.04       -0.18  0.03      
+## as.factor(CP)1  0.00  0.00  -0.09        0.20 -0.50 -0.17
 ```
 
 We find that only `CRIME` and `OPEN` are significant at the $\alpha=0.05$ level. For every additional major theft (residential burglaries and vehicle theft) per 1000 households, the predicted home value decreases by approximately \$1010 ($e^{0.0099247}=1.009974$), holding other variables constant. For every additional unit (which is not provided in the description) of open space, the home value is expected to increase by \$1020 ($e^{0.0194551}=1.019646$), holding other variables constant.
+
+
+```r
+# get loglik and RMSE
+logLik(col.errW.eig.log)
+```
+
+```
+## 'log Lik.' -9.062429 (df=7)
+```
+
+```r
+print(paste0("rmse = ", round(sqrt(sum((exp(col.errW.eig.log$fitted.values) - columbus.sf$HOVAL)^2)), 2)))
+```
+
+```
+## [1] "rmse = 92.5"
+```
+
+The log-likelihood of this model is -9.06 and the RMSE is 92.5.
 
 We also check whether there is some spatial dependence within the residuals of the model by performing Moran's I test. The test tests $H_0$: There is no spatial dependence against $H_1$: There is spatial dependence. We reject $H_0$ if the test statistic $<\alpha=0.05$.
 
 
 ```r
 # Run Moran's I test for col.errW.eig.log
-moran.test(residuals(col.errW.eig.log), lw) # not significant
+moran.mc(residuals(col.errW.eig.log), lw, nsim= 499) # not significant
 ```
 
 ```
 ## 
-## 	Moran I test under randomisation
+## 	Monte-Carlo simulation of Moran I
 ## 
-## data:  residuals(col.errW.eig.log)  
-## weights: lw    
+## data:  residuals(col.errW.eig.log) 
+## weights: lw  
+## number of simulations + 1: 500 
 ## 
-## Moran I statistic standard deviate = 0.36942, p-value = 0.3559
+## statistic = 0.013062, observed rank = 350, p-value = 0.3
 ## alternative hypothesis: greater
-## sample estimates:
-## Moran I statistic       Expectation          Variance 
-##       0.013061791      -0.020833333       0.008418433
 ```
 
 With a p-value of 0.3559, we fail to reject $H_0$. There does not seem to be any spatial dependence present in the residuals of our error model.
+
+\begin{aligned}
+log(y_{k}) \mid \mu_{k} & \sim N\left(\mu_{k}, \nu^{2}\right) \quad \text { for } k=1, \ldots, K \\
+g\left(\mu_{k}\right) &=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\psi_{k}
+\end{aligned}
 
 ## Conditional Autoregressive Models
 
@@ -741,74 +802,57 @@ The CAR model essentially assumes the spatial estimation is conditional on the v
 
 
 
-Since we have one response variable *House value*, the CAR model has only one random effect $\phi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
+Since we have one response variable *House value*, the CAR model has only one random effect $\psi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
 
 
 The package *CARBayes* by Duncan Lee is used to apply the CAR model in R. The specific function we use is *S.CARleroux*, where it specifies a CAR model proposed by Brian G. Leroux in 2000. The model expression is as follows. 
 
-* $\mathbf{W}$ is a 0-1 neighborhood or weight matrix
-* $k = 1, \dots, K$ is the index for a certain areal unit
-* $\rho$ is a spatial correlation parameter, with $\rho=0$ means indenpendence and $\rho=1$ indicates strong spatial correlation
-
-
 $$
-\psi_{k}=\phi_{k}
-$$
-$$
-\phi_{k} \mid \phi_{-k}, \mathbf{W}, \tau^{2}, \rho \sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \phi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right)
+\begin{aligned}
+log(y_{k}) \mid \mu_{k} & \sim N\left(\mu_{k}, \nu^{2}\right) \quad \text { for } k=1, \ldots, K \\
+g\left(\mu_{k}\right) &=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\psi_{k}
+\end{aligned}
 $$
 
 $$
 \begin{aligned}
-\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(a, b) \\
+\psi_{k} \mid \psi_{-k}, \mathbf{W}, \tau^{2}, \rho &\sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \psi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right) \\
+[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T & \sim \mathrm{N}\left(\boldsymbol{0}, 10^5\boldsymbol{I}\right) \\
+\nu^{2} & \sim \operatorname{Inverse-Gamma}(1, 0.01)\\
+\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(1, 0.01) \\
 \rho & \sim \text { Uniform }(0,1)
 \end{aligned}
 $$
+where 
 
-
-![](midterm-project_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
-
-
-
-```r
-set.seed(2021)
-(car_model_gaussian = CARBayes::S.CARleroux(log(HOVAL)~INC+CRIME+OPEN+DISCBD+CP, data = df.columbus_CAR, family = "gaussian", W = ww, burnin = 100000, n.sample = 300000, thin = 10, verbose = F))
-```
-
-```
-## 
-## #################
-## #### Model fitted
-## #################
-## Likelihood model - Gaussian (identity link function) 
-## Random effects model - Leroux CAR
-## Regression equation - log(HOVAL) ~ INC + CRIME + OPEN + DISCBD + CP
-## Number of missing observations - 0
-## 
-## ############
-## #### Results
-## ############
-## Posterior quantities and DIC
-## 
-##              Median    2.5%  97.5% n.effective Geweke.diag
-## (Intercept)  3.7227  2.9525 4.4936     11253.8        -0.5
-## INC          0.0147 -0.0084 0.0371     10672.1         0.6
-## CRIME       -0.0097 -0.0189 0.0000     12029.9         0.7
-## OPEN         0.0201  0.0003 0.0400     10658.0        -0.9
-## DISCBD      -0.0002 -0.1345 0.1352      9998.4        -0.3
-## CP1         -0.1957 -0.5607 0.1764     12099.2         0.5
-## nu2          0.0366  0.0032 0.1346       831.7         0.1
-## tau2         0.1004  0.0032 0.2920       986.1        -0.1
-## rho          0.3919  0.0340 0.8936     10148.1         0.3
-## 
-## DIC =  -26.93797       p.d =  4.499935       LMPL =  -10.04
-```
+* $[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T$ are the linear coefficients for predictors.
+* $\nu^2$ measures the variance for the logarithm of the housing values ($log(y_k)$).
+* $\psi_k$ is the spatial structure component that measures the spatial autocorrelation.
+* $\mathbf{W}$ is a neighborhood or adjacency matrix.
+* $\rho$ is a spatial correlation parameter, where $\rho=0$ means spatial independence and $\rho=1$ indicates strong spatial correlation.
 
 
 
 
 
-![](midterm-project_files/figure-html/unnamed-chunk-41-1.png)<!-- -->
+
+
+
+
+![](midterm-project_files/figure-html/unnamed-chunk-44-1.png)<!-- -->![](midterm-project_files/figure-html/unnamed-chunk-44-2.png)<!-- -->
+
+Table: 95% confidence intervals for model coefficients
+
+|            |     0.5|   0.025|  0.975|
+|:-----------|-------:|-------:|------:|
+|(Intercept) |  3.7227|  2.9525| 4.4936|
+|INC         |  0.0147| -0.0084| 0.0371|
+|CRIME       | -0.0097| -0.0189| 0.0000|
+|OPEN        |  0.0201|  0.0003| 0.0400|
+|DISCBD      | -0.0002| -0.1345| 0.1352|
+|CP1         | -0.1957| -0.5607| 0.1764|
+
+![](midterm-project_files/figure-html/unnamed-chunk-45-1.png)<!-- -->
 
 The log likelihood of this model is 17.97  while the training root mean square error (RMSE) is 52.6. From the table of $95\%$ confidence intervals for coefficients, we have
 
@@ -819,12 +863,12 @@ The log likelihood of this model is 17.97  while the training root mean square e
 * Hold other predictors fixed, regions with **closer distance to CBD** tend to have higher *House values*.
 * Hold other predictors fixed, **core** regions tend to have higher *House values*.
 
-![](midterm-project_files/figure-html/unnamed-chunk-42-1.png)<!-- -->
+![](midterm-project_files/figure-html/unnamed-chunk-46-1.png)<!-- -->
 
 
 ```r
 # Moran I
-Moran.I(car_model_gaussian$residuals[,1], ww)$p.value
+Moran.I(residuals(car_model_gaussian), ww)$p.value
 ```
 
 ```
@@ -833,231 +877,15 @@ Moran.I(car_model_gaussian$residuals[,1], ww)$p.value
 
 
 We also tested the Moran's I autocorrelation coefficient for the residuals. It shows there is **no** significant spatial correlation of the residuals since the p-value $p = 0.1 > 0.05$. Therefore, our CAR model fits the areal data nicely and leaves no significant spatial information in the residuals.
- 
+
 
 # Conclusions
 
-From our exploratory analysis and visualizing the data we know the variables of interest, with the exception of open space, have weak to moderate positive spatial autocorrelation, meaning neighboring polygons are more similar to each other than the dataset as a whole. All of the models we tried did not have significant ($\alpha = 0.05$) spatial autocorrelation. 
+From our exploratory analysis and visualizing the data we know the variables of interest, with the exception of open space, have weak to moderate positive spatial autocorrelation, meaning neighboring polygons are more similar to each other than the dataset as a whole. Both the constant mean and linear regression with i.i.d. errors had spatial autocorrelation in their residuals. There was no spatial autocorrelation in the SAR nor CAR models.
 
-We found that across all of our models average house value significantly increased with open space (units unknown). In some of the models (SAR, DURBIN, CAR) housing value decreased significantly with crime (per 1000 households). In the durbin log model and CAR model the effect of being located in an urban (core) neighborhood was also negative. 
-
-The best fit model by log likelihood was the CAR model. There was no significant difference in fit between the SAR lag and Durbin models.
+We found that across all of our models average house value significantly increased with open space (units unknown). In some of the models (SAR, CAR) housing value decreased significantly with crime (per 1000 households). In the CAR model the effect of being located in an urban (core) neighborhood was also negative. The best fit model by log likelihood was the CAR model.
 
 # References  
-<!--
-## Packages used  
-
-
-```r
-citation("tidyverse")
-```
-
-```
-## 
-##   Wickham et al., (2019). Welcome to the tidyverse. Journal of Open
-##   Source Software, 4(43), 1686, https://doi.org/10.21105/joss.01686
-## 
-## A BibTeX entry for LaTeX users is
-## 
-##   @Article{,
-##     title = {Welcome to the {tidyverse}},
-##     author = {Hadley Wickham and Mara Averick and Jennifer Bryan and Winston Chang and Lucy D'Agostino McGowan and Romain François and Garrett Grolemund and Alex Hayes and Lionel Henry and Jim Hester and Max Kuhn and Thomas Lin Pedersen and Evan Miller and Stephan Milton Bache and Kirill Müller and Jeroen Ooms and David Robinson and Dana Paige Seidel and Vitalie Spinu and Kohske Takahashi and Davis Vaughan and Claus Wilke and Kara Woo and Hiroaki Yutani},
-##     year = {2019},
-##     journal = {Journal of Open Source Software},
-##     volume = {4},
-##     number = {43},
-##     pages = {1686},
-##     doi = {10.21105/joss.01686},
-##   }
-```
-
-```r
-citation("sp")
-```
-
-```
-## 
-## To cite package sp in publications use:
-## 
-##   Pebesma, E.J., R.S. Bivand, 2005. Classes and methods for spatial
-##   data in R. R News 5 (2), https://cran.r-project.org/doc/Rnews/.
-## 
-##   Roger S. Bivand, Edzer Pebesma, Virgilio Gomez-Rubio, 2013. Applied
-##   spatial data analysis with R, Second edition. Springer, NY.
-##   https://asdar-book.org/
-## 
-## To see these entries in BibTeX format, use 'print(<citation>,
-## bibtex=TRUE)', 'toBibtex(.)', or set
-## 'options(citation.bibtex.max=999)'.
-```
-
-```r
-citation("spData")
-```
-
-```
-## 
-## To cite package 'spData' in publications use:
-## 
-##   Roger Bivand, Jakub Nowosad and Robin Lovelace (2021). spData:
-##   Datasets for Spatial Analysis. R package version 2.0.1.
-##   https://CRAN.R-project.org/package=spData
-## 
-## A BibTeX entry for LaTeX users is
-## 
-##   @Manual{,
-##     title = {spData: Datasets for Spatial Analysis},
-##     author = {Roger Bivand and Jakub Nowosad and Robin Lovelace},
-##     year = {2021},
-##     note = {R package version 2.0.1},
-##     url = {https://CRAN.R-project.org/package=spData},
-##   }
-```
-
-```r
-citation("terra")
-```
-
-```
-## 
-## To cite package 'terra' in publications use:
-## 
-##   Robert J. Hijmans (2021). terra: Spatial Data Analysis. R package
-##   version 1.4-11. https://CRAN.R-project.org/package=terra
-## 
-## A BibTeX entry for LaTeX users is
-## 
-##   @Manual{,
-##     title = {terra: Spatial Data Analysis},
-##     author = {Robert J. Hijmans},
-##     year = {2021},
-##     note = {R package version 1.4-11},
-##     url = {https://CRAN.R-project.org/package=terra},
-##   }
-```
-
-```r
-citation("spdep")
-```
-
-```
-## 
-## To cite spdep in publications use one or more of the following as
-## appropriate:
-## 
-##   Bivand, Roger S. and Wong, David W. S. (2018) Comparing
-##   implementations of global and local indicators of spatial association
-##   TEST, 27(3), 716-748. URL https://doi.org/10.1007/s11749-018-0599-x
-## 
-##   Roger S. Bivand, Edzer Pebesma, Virgilio Gomez-Rubio, 2013. Applied
-##   spatial data analysis with R, Second edition. Springer, NY.
-##   https://asdar-book.org/
-## 
-## To see these entries in BibTeX format, use 'print(<citation>,
-## bibtex=TRUE)', 'toBibtex(.)', or set
-## 'options(citation.bibtex.max=999)'.
-```
-
-```r
-citation("CARBayes")
-```
-
-```
-## 
-## To cite CARBayes in publications use:
-## 
-##   Duncan Lee (2013). CARBayes: An R Package for Bayesian Spatial
-##   Modeling with Conditional Autoregressive Priors. Journal of
-##   Statistical Software, 55(13), 1-24. URL
-##   https://www.jstatsoft.org/htaccess.php?volume=55&type=i&issue=13.
-## 
-## A BibTeX entry for LaTeX users is
-## 
-##   @Article{,
-##     title = {{CARBayes}: An {R} Package for {B}ayesian Spatial Modeling with Conditional Autoregressive Priors},
-##     author = {Duncan Lee},
-##     journal = {Journal of Statistical Software},
-##     year = {2013},
-##     volume = {55},
-##     number = {13},
-##     pages = {1--24},
-##     url = {https://www.jstatsoft.org/htaccess.php?volume=55&type=i&issue=13},
-##   }
-```
-
-```r
-citation("GGally")
-```
-
-```
-## 
-## To cite package 'GGally' in publications use:
-## 
-##   Barret Schloerke, Di Cook, Joseph Larmarange, Francois Briatte,
-##   Moritz Marbach, Edwin Thoen, Amos Elberg and Jason Crowley (2021).
-##   GGally: Extension to 'ggplot2'. R package version 2.1.2.
-##   https://CRAN.R-project.org/package=GGally
-## 
-## A BibTeX entry for LaTeX users is
-## 
-##   @Manual{,
-##     title = {GGally: Extension to 'ggplot2'},
-##     author = {Barret Schloerke and Di Cook and Joseph Larmarange and Francois Briatte and Moritz Marbach and Edwin Thoen and Amos Elberg and Jason Crowley},
-##     year = {2021},
-##     note = {R package version 2.1.2},
-##     url = {https://CRAN.R-project.org/package=GGally},
-##   }
-```
-
-```r
-citation("sf")
-```
-
-```
-## 
-## To cite package sf in publications, please use:
-## 
-##   Pebesma, E., 2018. Simple Features for R: Standardized Support for
-##   Spatial Vector Data. The R Journal 10 (1), 439-446,
-##   https://doi.org/10.32614/RJ-2018-009
-## 
-## A BibTeX entry for LaTeX users is
-## 
-##   @Article{,
-##     author = {Edzer Pebesma},
-##     title = {{Simple Features for R: Standardized Support for Spatial Vector Data}},
-##     year = {2018},
-##     journal = {{The R Journal}},
-##     doi = {10.32614/RJ-2018-009},
-##     url = {https://doi.org/10.32614/RJ-2018-009},
-##     pages = {439--446},
-##     volume = {10},
-##     number = {1},
-##   }
-```
-
-```r
-citation("sp")
-```
-
-```
-## 
-## To cite package sp in publications use:
-## 
-##   Pebesma, E.J., R.S. Bivand, 2005. Classes and methods for spatial
-##   data in R. R News 5 (2), https://cran.r-project.org/doc/Rnews/.
-## 
-##   Roger S. Bivand, Edzer Pebesma, Virgilio Gomez-Rubio, 2013. Applied
-##   spatial data analysis with R, Second edition. Springer, NY.
-##   https://asdar-book.org/
-## 
-## To see these entries in BibTeX format, use 'print(<citation>,
-## bibtex=TRUE)', 'toBibtex(.)', or set
-## 'options(citation.bibtex.max=999)'.
-```
-
-## Paper's referenced and other resources  
---> 
 
 
 
