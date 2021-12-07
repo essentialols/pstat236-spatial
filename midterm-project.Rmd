@@ -447,7 +447,7 @@ The simplest, yet naive, model is the constant means model, which is essentially
 $$
 Y_i=\mu+\varepsilon_i
 $$
-Where $Y_i$ is the value of a home in 1000s of dollars, $\mu$ is the mean home value and $\evarepsilonlon_i$ are the individual deviations from the mean, which we assume to be be i.i.d. distributed.
+Where $Y_i$ is the value of a home in 1000s of dollars, $\mu$ is the mean home value and $\varepsilon_i$ are the individual deviations from the mean, which we assume to be be i.i.d. distributed.
 
 $$
 \hat{Y_i} = \bar{Y} = \frac{1}{n}\sum_{i=1}^{n}Y_i
