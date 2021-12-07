@@ -3,15 +3,15 @@ title: "Areal Data Group Project"
 author: "Kayla, Ingmar, Hanmo"
 date: "`r Sys.Date()`"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     keep_md: yes
     toc: yes
     toc_float: yes
     toc_depth: 3
     code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 bibliography: [packages.bib, references.bib]
 ---
 \newpage
@@ -92,7 +92,7 @@ Using these neighbor relationships we can create a `weights matrix` based on und
 After we do our analysis we also need to check the residuals to ensure we removed the spatial patterns.  
 
 # Our dataset  
-The dataset we are using is published in `spData` package and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
+The **Columbus OH spatial analysis data set** we are using is published in `spData` package and comes from: _Anselin, Luc. 1988. Spatial econometrics: methods and models. Dordrecht: Kluwer Academic, Table 12.1 p. 189._
 ```{r}
 ## load dataset
 columbus <- vect(system.file("shapes/columbus.shp", package="spData")[1])
@@ -101,12 +101,12 @@ df.columbus <- as.data.frame(columbus)
 
 The county data is:  
 
-* $\texttt{HOVAL}_i$ housing value (in \$1,000) of county $i=1\dots49$
-* $\texttt{INC}_i$ household income (in \$1,000) of county $i=1\dots49$
-* $\texttt{CRIME}_i$ residential burglaries and vehicle thefts per thousand households in the neighborhood of county $i=1\dots49$
-* $\texttt{OPEN}_i$ open space in neighborhood of county $i=1\dots49$
-* $\texttt{PLUMB}_i$ percentage housing units without plumbing of county $i=1\dots49$
-* $\texttt{CP}_i$ core-periphery is an indicator variable $I_{CP}(i)= \begin{cases}1 & \text { if county } i \text { is in the core } \\ 0 & \text { otherwise }\end{cases}$
+* $\texttt{HOVAL}_i$ housing value (in \$1,000) of the location $i=1\dots49$
+* $\texttt{INC}_i$ household income (in \$1,000) of the location $i=1\dots49$
+* $\texttt{CRIME}_i$ residential burglaries and vehicle thefts per thousand households in the neighborhood of the location $i=1\dots49$
+* $\texttt{OPEN}_i$ open space in neighborhood of the location $i=1\dots49$
+* $\texttt{PLUMB}_i$ percentage housing units without plumbing of the location $i=1\dots49$
+* $\texttt{CP}_i$ core-periphery is an indicator variable $I_{CP}(i)= \begin{cases}1 & \text { if the location } i \text { is in the core } \\ 0 & \text { otherwise }\end{cases}$
 
 ```{r, echo=FALSE, out.width= "50%"}
 ## set up plotting color palette
@@ -447,7 +447,7 @@ The simplest, yet naive, model is the constant means model, which is essentially
 $$
 Y_i=\mu+\varepsilon_i
 $$
-Where $Y_i$ is the value of a home in 1000s of dollars, $\mu$ is the mean home value and $\epsilon_i$ are the individual deviations from the mean, which we assume to be be i.i.d. distributed.
+Where $Y_i$ is the value of a home in 1000s of dollars, $\mu$ is the mean home value and $\evarepsilonlon_i$ are the individual deviations from the mean, which we assume to be be i.i.d. distributed.
 
 $$
 \hat{Y_i} = \bar{Y} = \frac{1}{n}\sum_{i=1}^{n}Y_i
@@ -530,19 +530,19 @@ To address the shortcomings of the linear model under the assumption of i.i.d. e
 
 
 $$
-
+\begin{aligned}
 Y&=X beta+\varepsilon \\
 \text{where} \quad \varepsilon&=\lambda W \varepsilon+u \\
 \varepsilon&=(I-\lambda W)^{-1} u\\
 \therefore	 \quad Y&=X \beta+(I-\lambda W)^{-1} u \\
-
+\end{aligned}
 $$
 
 where $\mathbf{Y}$ is a vector of home values in 1000s of dollars, $\mathbf{X}$ is a matrix of the covariates `INC`, `CRIME`, `OPEN`, and `CP`. with constant variance $E\left[u u^{\prime}\right]=\sigma^{2} I$. $\varepsilon$ is the error term of a standard regression model, $\lambda$ is the autoregressive parameter, $W$ is the row-standardised spatial weights matrix $W$ (that is, the weights are standardised such that $\Sigma_j W_{ij} = 1 \quad\text{for all}\quad i$), and $u_{i} \stackrel{i.i.d.}{\sim} N(0,\sigma^2)$ a random error term. $I$ is the identity matrix.
 
 In linear form the model is:
 $$
-Y_k&=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\varepsilon_{k}
+Y_k=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\varepsilon_{k}
 $$
 
 The error variance-covariance matrix is given by
@@ -595,68 +595,54 @@ moran.mc(residuals(col.errW.eig.log), lw, nsim= 499) # not significant
 
 With a p-value of 0.3559, we fail to reject $H_0$. There does not seem to be any spatial dependence present in the residuals of our error model.
 
-
-log(y_{k}) \mid \mu_{k} & \sim N\left(\mu_{k}, \nu^{2}\right) \quad \text { for } k=1, \ldots, K \\
-g\left(\mu_{k}\right) &=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\psi_{k}
-
-
 ## Conditional Autoregressive Models
 
 In the next step, we implement the conditional autoregressive (CAR) model on the Columbus data to study the impact of covariates on House values in Columbus, OH, 1980 with spatial information. 
 
-The CAR model essentially assumes the spatial estimation is conditional on the value of neighbors. As a typical Bayes model, CAR model assumes prior distribution on the model parameters and applies computationally intensive sampling techniques like Markov Chain Monte Carlo (MCMC) or MCMC with Gibbs sampling to find the fitted parameters.
+The CAR model essentially assumes the spatial estimation is conditional on the value of neighbors. As a typical Bayes model, CAR model assumes conditional autoregressive prior distribution on the spatial component and applies computationally intensive sampling techniques, e.g. MCMC with Gibbs sampling, to find the posterior distribution of the fitted parameters.
+
+Since we have only one response variable *House value*, the CAR model has one random spatial component $\varepsilon_k$ at each spatial location $k$. Due to the continuity of the variable *House value*, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
 
 
-
-Since we have one response variable *House value*, the CAR model has only one random effect $\psi_k$ at each spatial location $k$. Because *House value* is continuous, Gaussian distribution is preferred for the CAR model and we take logarithm of the *House value* as well to make it normally distributed.
-
-
-The package *CARBayes* by Duncan Lee is used to apply the CAR model in R. The specific function we use is *S.CARleroux*, where it specifies a CAR model proposed by Brian G. Leroux in 2000. The model expression is as follows. 
+We use a CAR model proposed by Brian G. Leroux in 2000. The model expression is as follows. 
 
 $$
-
+\begin{aligned}
 log(y_{k}) \mid \mu_{k} & \sim N\left(\mu_{k}, \nu^{2}\right) \quad \text { for } k=1, \ldots, K \\
-g\left(\mu_{k}\right) &=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\psi_{k}
-
-$$
-
-$$
-
-\psi_{k} \mid \psi_{-k}, \mathbf{W}, \tau^{2}, \rho &\sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \psi_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right) \\
+\mu_{k} &=\beta_{I}Inc_{k} + \beta_{C}Crime_{k} + \beta_{O}Open_k +\beta_D DisCBD_k + \beta_{CP1} \mathbf{1}\{CP_k=1\}+\varepsilon_{k}\\
+\varepsilon_{k} \mid \boldsymbol{\varepsilon}_{-k}, \mathbf{W}, \tau^{2}, \rho &\sim \mathrm{N}\left(\frac{\rho \sum_{i=1}^{K} w_{k i} \varepsilon_{i}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}, \frac{\tau^{2}}{\rho \sum_{i=1}^{K} w_{k i}+1-\rho}\right) \\
 [\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T & \sim \mathrm{N}\left(\boldsymbol{0}, 10^5\boldsymbol{I}\right) \\
-\nu^{2} & \sim \operatorname{Inverse-Gamma}(1, 0.01)\\
-\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(1, 0.01) \\
+\nu^{2} & \sim \operatorname{Inverse-Gamma}(1, 0.1)\\
+\tau^{2} & \sim \operatorname{Inverse}-\operatorname{Gamma}(1, 0.1) \\
 \rho & \sim \text { Uniform }(0,1)
-
+\end{aligned}
 $$
 where 
 
 * $[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]^T$ are the linear coefficients for predictors.
 * $\nu^2$ measures the variance for the logarithm of the housing values ($log(y_k)$).
-* $\psi_k$ is the spatial structure component that measures the spatial autocorrelation.
+* $\varepsilon_k$ is the spatial structure component that measures the spatial autocorrelation.
 * $\mathbf{W}$ is a neighborhood or adjacency matrix.
 * $\rho$ is a spatial correlation parameter, where $\rho=0$ means spatial independence and $\rho=1$ indicates strong spatial correlation.
 
+The package *CARBayes* by Duncan Lee is used to apply the CAR model in R. The specific function we use is *S.CARleroux*.
 
-```{r include=F}
-df.columbus_CAR = df.columbus
-df.columbus_CAR$CP = as.factor(df.columbus_CAR$CP)
-ggpairs(data = df.columbus_CAR, columns = c(7, 8:10, 12, 18))
-```
-
-
-```{r include=FALSE}
+```{r results="hide"}
 set.seed(2021)
-(car_model_gaussian = CARBayes::S.CARleroux(log(HOVAL)~INC+CRIME+OPEN+DISCBD+CP, data = df.columbus_CAR, family = "gaussian", W = ww, burnin = 100000, n.sample = 300000, thin = 10, verbose = F))
+car_model_gaussian = CARBayes::S.CARleroux(log(HOVAL)~INC+CRIME+OPEN+DISCBD+as.factor(CP), data = columbus.sf, family = "gaussian", W = ww, burnin = 5000, n.sample = 30000, thin = 10, verbose = F, prior.mean.beta = rep(0, 6), prior.var.beta = rep(10^5, 6), prior.nu2 = c(1, 0.1), prior.tau2 = c(1, 0.1))
 ```
 
 ```{r include=FALSE}
-# loglik_temp = round(logLik(car_model_gaussian), 2)
+loglik_temp = round(logLik(car_model_gaussian), 2)
 # print(paste0("The log likehood is ", round(logLik(car_model_gaussian), 2)))
 # INC+CRIME+DISCBD+X+Y+PERIMETER+CP 13.59
 ```
 
-```{r echo=FALSE}
+The trace figures provide the **posterior distributions** for coefficients $[\beta_I, \beta_C, \beta_O, \beta_D, \beta_{CP1}]$ as well as the model parameters $[\nu^2,\tau^2,  \varepsilon_k, \rho]$. 
+
+For the coefficients and model parameters, stationary trace plots that is quite different from the prior distributions indicate that all parameters have sufficient state changes as the MCMC algorithm runs. It's may provide reasonable estimate of the coefficient values.
+
+```{r}
 colnames(car_model_gaussian$samples$beta)<- c("Intercept", "INC", "CRIME", "OPEN", "DISCBD", "CP")
 par(mfrow=c(3,4))
 par(mar=c(2,2,2,2))
@@ -668,52 +654,69 @@ for(i in 2:6){
 }
 par(mfrow=c(2,4))
 par(mar=c(2,2,2,2))
-cur_parameters = sample((as.vector(car_model_gaussian$samples$phi)), 20000)
-plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of psi"))
-plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of psi"))
-cur_parameters =  sample((as.vector(car_model_gaussian$samples$tau2)), 20000)
+cur_parameters = sample((as.vector(car_model_gaussian$samples$phi)), 10000)
+plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of varepsilon"))
+plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of varepsilon"))
+cur_parameters =  as.vector(car_model_gaussian$samples$tau2)
 plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of squared tau"))
 plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of squared tau"))
-cur_parameters = sample((as.vector(car_model_gaussian$samples$nu2)), 20000)
+cur_parameters = as.vector(car_model_gaussian$samples$nu2)
 plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of squared nu"))
 plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of squared nu"))
-cur_parameters = sample((as.vector(car_model_gaussian$samples$rho)), 20000)
+cur_parameters = as.vector(car_model_gaussian$samples$rho)
 plot(cur_parameters, xlab = "Iterations", ylab=NA, type="l", main = paste0("Trace of rho"))
 plot(density(cur_parameters), xlab = NA, ylab=NA, type="l", main = paste0("Density of rho"))
 ```
-```{r echo=F}
+```{r}
 betas1 <- CARBayes::summarise.samples(car_model_gaussian$samples$beta, quantiles=c(0.5, 0.025, 0.975))
 resultsCAR1 <- round(betas1$quantiles,4)
 rownames(resultsCAR1) <- colnames(car_model_gaussian$X)
 knitr::kable(resultsCAR1, caption = "95% confidence intervals for model coefficients")
-# print(paste0("The MSE is ", round(sqrt(sum((exp(car_model_gaussian$fitted.values) - df.columbus_CAR$HOVAL)^2)), 2)))
-plot(x = df.columbus_CAR$HOVAL, y = exp(car_model_gaussian$fitted.values), type="p",
+```
+
+From the table of $95\%$ confidence intervals for coefficients, we have for a house that is worth one million dollars,
+
+* *CRIME* and *OPEN* are the two variables that is significant since their confidence intervals don't have zero involved.
+* Hold other predictors fixed, regions with one unit decrease of residential burglaries and vehicle thefts per thousand households tend to increase the house value by $9,747.
+* Hold other predictors fixed, regions with one unite increase of the open area (no specific definition) tend to increase the house values by $20,100.
+
+```{r}
+# print(paste0("The MSE is ", round(sqrt(sum((exp(car_model_gaussian$fitted.values) - columbus.sf$HOVAL)^2)), 2)))
+plot(x = columbus.sf$HOVAL, y = exp(car_model_gaussian$fitted.values), type="p",
      xlab = "housing value", ylab = "Fitted value", main = "Fitted value vs Observed value")
 abline(0,1)
 ```
 
-The log likelihood of this model is 17.97  while the training root mean square error (RMSE) is 52.6. From the table of $95\%$ confidence intervals for coefficients, we have
 
-* *CRIME* and *OPEN* are the two variables that is significant since their confidence intervals don't have zero involved.
-* Hold other predictors fixed, regions with **less crimes** tend to have higher *House values*.
-* Hold other predictors fixed, regions with **higher household incomes** tend to have higher *House values*.
-* Hold other predictors fixed, regions with **more open area** tend to have higher *House values*.
-* Hold other predictors fixed, regions with **closer distance to CBD** tend to have higher *House values*.
-* Hold other predictors fixed, **core** regions tend to have higher *House values*.
+The log likelihood of this model is 12.11   while the training root mean square error (RMSE) is 57.41.
 
-```{r echo=F}
+```{r}
 cc <- cut(residuals(car_model_gaussian), 10)
 mycols <- pal[as.numeric(cc)]
 plot(columbus, col = mycols, main = "Residuals")
 ```
 
+We also tested the Moran's I autocorrelation coefficient for the residuals. 
+
+The tests $H_0$: There is no spatial dependence against $H_1$: There is spatial dependence. We reject $H_0$ if the p-value of the test statistic $<\alpha=0.05$.
+
 ```{r}
-# Moran I
-Moran.I(residuals(car_model_gaussian), ww)$p.value
+# Run Moran's I test for col.errW.eig.log
+moran.mc(residuals(car_model_gaussian), lw, nsim= 499) # not significant
 ```
 
+It shows there is **no** significant spatial correlation of the residuals since the p-value $p = 0.148 > 0.05$. Therefore, our CAR model fits the areal data nicely and leaves no significant spatial information in the residuals.
 
-We also tested the Moran's I autocorrelation coefficient for the residuals. It shows there is **no** significant spatial correlation of the residuals since the p-value $p = 0.1 > 0.05$. Therefore, our CAR model fits the areal data nicely and leaves no significant spatial information in the residuals.
+## Model comparison
+
+To compare the CAR model and SAR model, the following table containing the log likelihood and RMSE are proposed.
+
+```{r}
+compare = data.frame(model = c("SAR", "CAR"), Log_Lik = c(-9.06, 12.11 ), RMSE = c(92.5, 57.41))
+knitr::kable(compare, caption = "Comparison between the SAR and CAR models")
+```
+
+From the table above, CAR model is better since it has higher likelihood and lower RMSE.
 
 
 # Conclusions
